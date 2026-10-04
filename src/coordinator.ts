@@ -106,10 +106,15 @@ export async function createPlan(req: import("zod").infer<typeof import("./types
 
   const st = { temp: emptyTemp(), priorities, energy: parseEnergy(req.energyLevel) ?? 3 };
   const heard: string[] = [];
-  for (const u of req.utterances) {
-    const { result } = await interpretUtterance(u, { stage: "pre-commute", durationMin: req.commuteDurationMinutes });
-    applyInterpretation(result, st); heard.push(result.summary);
-  }
+  const engines: string[] = [];
+  // Interpret all answers concurrently (one LLM round-trip of latency, not three), then apply them in order.
+  const results = await Promise.all(req.utterances.map((u) => {
+    const answer = typeof u === "string" ? u : u.answer;
+    const question = typeof u === "string" ? undefined : u.question;
+    // The LLM sees the question too ("Not very." only makes sense next to what was asked); keyword fallback sees the answer.
+    return interpretUtterance(answer, { stage: "pre-commute", durationMin: req.commuteDurationMinutes, question }, answer);
+  }));
+  for (const r of results) { applyInterpretation(r.result, st); heard.push(r.result.summary); engines.push(r.engine); }
 
   const ckey = contextKey({ period: periodOfDay(now), energy: st.energy, durationMin: req.commuteDurationMinutes, lectureDays });
   const learned = await learnedMusicDelta(req.userId, ckey, baseline.musicShare);
@@ -131,6 +136,8 @@ export async function createPlan(req: import("zod").infer<typeof import("./types
   return {
     commuteId, spokenResponse: spoken,
     reason: heard.length ? `Heard: ${heard.join("; ")}.` : "Initial plan from stated priorities, energy and preferences.",
+    interpretedVia: engines.length ? (engines.every((e) => e === "keywords") ? "keywords" : "llm") : "none",
+    interpretedEngines: engines,
     interruptCurrentActivity: false,
     currentAction: plan[0] ? { type: plan[0].type, durationMinutes: plan[0].minutes } : null,
     plan, updatedPlan: plan, totalMinutes: req.commuteDurationMinutes,
@@ -148,7 +155,7 @@ function initialSpeech(total: number, plan: PlanItem[], pri: Record<string, Prio
   const bits = [
     top ? `prioritize ${prettyName(top[0] === "presentation" ? "presentation_prep" : top[0])}` : "build a balanced mix",
     lec === 0 ? "skip the lecture" : lec <= 20 && top ? "keep the lecture short" : "fit in your lecture",
-    breaks ? `give you ${breaks === 1 ? "a music break" : `${breaks === 2 ? "two" : breaks} music breaks`}` : "",
+    breaks ? `give you ${breaks === 1 ? "a music break" : `${({ 2: "two", 3: "three", 4: "four" } as Record<number, string>)[breaks] ?? breaks} music breaks`}` : "",
   ].filter(Boolean);
   const list = bits.length > 1 ? `${bits.slice(0, -1).join(", ")}, and ${bits[bits.length - 1]}` : bits[0];
   return `You have ${durationPhrase(total)}. ${why ? `Since ${why}, ` : ""}I'll ${list}. Does that sound good?`;
@@ -187,10 +194,11 @@ export async function replan(a: ReplanArgs) {
   // 1. interpret explicit feedback (temporary by default)
   let interp: Interpretation = noChange();
   let via = "none";
+  let engine = "none";
   const fb = a.userFeedback?.trim();
   if (fb) {
     const r = await interpretUtterance(fb, { remainingMinutes: remaining, currentActivity: current, energy: st.energy, priorities: st.priorities, temp: st.temp });
-    interp = r.result; via = r.via;
+    interp = r.result; via = r.via; engine = r.engine;
     applyInterpretation(interp, st);
     await db.query(
       "INSERT INTO feedback_events (id,commute_id,raw_feedback,interpreted_change_json,activity_type,temporary_or_long_term) VALUES ($1,$2,$3,$4::jsonb,$5,$6)",
@@ -258,7 +266,7 @@ export async function replan(a: ReplanArgs) {
     interruptCurrentActivity: interrupt,
     currentAction: first ? { type: first.type, durationMinutes: first.minutes } : null,
     updatedPlan: plan, plan, remainingMinutes: remaining,
-    temporaryState: st.temp, interpretedVia: via,
+    temporaryState: st.temp, interpretedVia: via, interpretedEngine: engine, interpretation: fb ? interp : null,
     urgentEvent: urgentEvent ? { ...urgentEvent, askForSummary: true } : null,
   };
 }
@@ -271,6 +279,7 @@ function replanSpeech(hasFeedback: boolean, prev: PlanItem[], next: PlanItem[], 
   else if (frac(next, "lecture") < frac(prev, "lecture") - 0.02) parts.push("shorten the lecture");
   else if (frac(next, "lecture") > frac(prev, "lecture") + 0.02) parts.push("make room for more lecture");
   if (frac(next, "music") > frac(prev, "music") + 0.02) parts.push("give you more music");
+  else if (i.musicDelta > 0) parts.push("fit in as much music as I can");
   else if (frac(next, "music") < frac(prev, "music") - 0.02) parts.push("trim the music");
   const top = Object.entries(pri).filter(([k, p]) => k !== "music" && p.significance >= 8 && next.some((b) => sameActivity(b.type, k)))
     .sort((a, b) => b[1].significance - a[1].significance)[0];

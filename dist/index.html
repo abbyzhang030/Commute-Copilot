@@ -24,6 +24,7 @@
     .up-next{min-width:0;border-left:1px solid var(--line);padding-left:clamp(22px,4vw,44px)}.itinerary{display:grid;gap:10px}.up-item{display:grid;grid-template-columns:32px 1fr auto;gap:10px;align-items:center;min-width:0;transition:opacity .25s,transform .35s}.up-icon{width:32px;height:32px;border-radius:10px;background:rgba(255,255,255,.08);color:#d8e4dd}.up-copy{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:.91rem;font-weight:700}.up-min{color:#9caaa3;font-size:.8rem;font-weight:700;white-space:nowrap}
     .voice{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;min-width:122px}.mic{width:88px;height:88px;border:0;border-radius:50%;display:grid;place-items:center;cursor:pointer;color:#06110c;background:linear-gradient(145deg,#dfffee,#75f7b0);box-shadow:0 10px 34px rgba(64,255,150,.23),inset 0 1px 0 #fff;transition:transform .18s,box-shadow .2s}.mic:hover{transform:scale(1.025)}.mic:active{transform:scale(.96)}.mic:focus-visible{outline:3px solid white;outline-offset:4px}.mic svg{width:33px;height:33px}.voice-label{font-size:.86rem;font-weight:750;margin-top:11px}.voice-hint{font-size:.68rem;color:#87958e;margin-top:3px}.voice.listening .mic{animation:pulse 1.35s infinite;background:linear-gradient(145deg,#fff,#8fffc1)}.voice.speaking .mic{box-shadow:0 0 0 8px rgba(143,255,193,.12),0 0 0 16px rgba(143,255,193,.05)}
     @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(143,255,193,.35),0 10px 34px rgba(64,255,150,.26)}50%{box-shadow:0 0 0 18px rgba(143,255,193,0),0 10px 40px rgba(64,255,150,.4)}}
+    .offline-badge{position:fixed;z-index:20;top:12px;left:50%;transform:translateX(-50%);display:none;background:#ffcd65;color:#211707;border-radius:999px;padding:6px 14px;font-size:.75rem;font-weight:760;box-shadow:0 6px 20px rgba(0,0,0,.25)}.offline-badge.show{display:block}
     .notice{position:absolute;z-index:6;left:50%;top:19%;transform:translate(-50%,-10px);opacity:0;pointer-events:none;background:rgba(8,15,14,.92);color:white;border:1px solid rgba(255,255,255,.14);border-radius:18px;padding:14px 17px;box-shadow:0 16px 45px rgba(0,0,0,.32);backdrop-filter:blur(20px);min-width:min(390px,calc(100vw - 32px));display:flex;align-items:center;gap:13px;transition:opacity .25s,transform .25s}.notice.show{opacity:1;transform:translate(-50%,0)}.notice-icon{display:grid;place-items:center;width:38px;height:38px;border-radius:12px;background:#ffcd65;color:#211707}.notice strong{display:block;font-size:.9rem}.notice span{display:block;margin-top:3px;color:#aebbb4;font-size:.78rem}.notice.email .notice-icon{background:#ffcf68}
     .transcript{position:absolute;z-index:5;left:50%;bottom:calc(clamp(10px,2.5vw,34px) + 280px);transform:translateX(-50%);width:min(620px,calc(100vw - 32px));text-align:center;color:white;font-size:clamp(1rem,2.2vw,1.25rem);font-weight:650;line-height:1.35;text-shadow:0 2px 10px rgba(0,0,0,.65);opacity:0;transition:opacity .2s}.transcript.show{opacity:1}.transcript span{display:inline-block;background:rgba(7,15,13,.74);padding:10px 15px;border-radius:14px;backdrop-filter:blur(12px)}
     .replan .sheet{animation:sheetFlash .7s ease}.delta{color:var(--mint);font-weight:800}@keyframes sheetFlash{50%{border-color:rgba(143,255,193,.56);box-shadow:0 22px 80px rgba(22,226,116,.18)}}
@@ -52,6 +53,7 @@
     </svg>
   </section>
 
+  <div class="offline-badge" id="offlineBadge" role="status" aria-live="polite">Offline fallback · showing sample data</div>
   <header class="trip">
     <div class="destination"><p class="eyebrow">Destination</p><h1>To Work</h1><p class="address">Market Street, San Francisco</p></div>
     <div class="time-card"><div class="remaining" id="tripRemaining">1h 42m</div><div class="eta">ETA <span id="eta">10:59 AM</span></div></div>
@@ -97,7 +99,7 @@
       {type:'arrival',title:'Arrival Summary',meta:'Presentation checklist',minutes:5,remaining:5}
     ]
   };
-  const state={commuteId:'commute-demo-01',remainingMinutes:102,eta:new Date(Date.now()+102*60000),plan:plans.initial.map(x=>({...x})),currentIndex:3,voiceState:'idle',agentState:'following_plan',question:0,answers:[],alert:null};
+  const state={commuteId:'commute-demo-01',remainingMinutes:102,eta:new Date(Date.now()+102*60000),plan:plans.initial.map(x=>({...x})),currentIndex:3,voiceState:'idle',agentState:'following_plan',question:0,answers:[],qa:[],alert:null,live:false,offline:false};
   const $=id=>document.getElementById(id); $('mic').innerHTML=icons.mic;
 
   function fmtTime(d){return d.toLocaleTimeString([], {hour:'numeric',minute:'2-digit'}).replace(' ',' ')}
@@ -118,12 +120,25 @@
     if('speechSynthesis'in window){speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);u.rate=1.02;u.pitch=.97;u.onend=done;speechSynthesis.speak(u);setTimeout(done,Math.max(3500,text.length*55))}else setTimeout(done,Math.max(2200,text.length*45));
     let ran=false;function done(){if(ran)return;ran=true;$('transcript').classList.remove('show');setVoice('idle');after?.()}
   }
+  function setOffline(on,why){state.offline=on;$('offlineBadge').classList.toggle('show',on);if(on)$('offlineBadge').textContent=`Offline fallback · ${why||'backend unavailable'} · showing sample data`}
+  // Backend calls can include a database round-trip plus an LLM call, so allow 20s. Any failure is logged and shown via the badge.
   async function api(path,payload,fallback){
-    try{const ctrl=new AbortController();setTimeout(()=>ctrl.abort(),2200);const res=await fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),signal:ctrl.signal});if(!res.ok)throw 0;return await res.json()}catch{return fallback}
+    const ctrl=new AbortController();const timer=setTimeout(()=>ctrl.abort(),20000);
+    try{const res=await fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),signal:ctrl.signal});if(!res.ok)throw new Error(`HTTP ${res.status}`);const json=await res.json();setOffline(false);return json}
+    catch(err){console.warn('[api] offline fallback for',path,err);setOffline(true,err.name==='AbortError'?'timed out':String(err.message||err));return{...fallback,__offline:true}}
+    finally{clearTimeout(timer)}
+  }
+  // Tell the Coordinator what actually happened so replans credit finished work and learning gets real data.
+  async function reportProgress(a){
+    if(!state.live||!a||!a.raw)return;const elapsed=a.minutes-a.remaining,delta=elapsed-(a.reported||0);if(delta<=0)return;a.reported=elapsed;
+    try{await fetch('/api/activity-result',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({commuteId:state.commuteId,type:a.raw,actualMinutes:delta})})}catch(err){console.warn('[activity-result] failed',err)}
+  }
+  async function completeCommute(){
+    if(!state.live)return;try{await fetch('/api/complete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({commuteId:state.commuteId})})}catch(err){console.warn('[complete] failed',err)}
   }
   function media(action){fetch(`/api/media/${action}`,{method:'POST'}).catch(()=>{})}
   const prompts=["What matters most during this drive?","How important is your ornithology lecture today?","Do you want a productive drive or something lighter?"];
-  function beginPlanning(){state.question=0;state.answers=[];say(prompts[0],listen)}
+  function beginPlanning(){state.question=0;state.answers=[];state.qa=[];say(prompts[0],listen)}
   function listen(){
     setVoice('listening');
     const Recognition=window.SpeechRecognition||window.webkitSpeechRecognition;
@@ -141,32 +156,36 @@
       replan(text);return;
     }
     if(state.agentState==='interrupting'){say('Your manager says the presentation slides changed. The new version emphasizes the launch timeline. I’ve added that to presentation prep.',()=>{state.agentState='following_plan';media('play');showNotice('Added to presentation prep','Music will resume now.');});return}
-    if(state.question<3){state.answers.push(text);state.question++;if(state.question<3){say(prompts[state.question],listen)}else createPlan();return}
+    if(state.question<3){state.answers.push(text);state.qa.push({question:prompts[state.question],answer:text});state.question++;if(state.question<3){say(prompts[state.question],listen)}else createPlan();return}
     replan(text);
   }
   async function createPlan(){
     const fallback={spokenResponse:"You have just under two hours. Since your presentation is important and you’re feeling tired, I’ll prioritize presentation prep, keep the lecture short, and add music breaks. Sound good?",plan:plans.initial};
-    const result=await api('/api/plan',{userId:'demo-user',commuteDurationMinutes:state.remainingMinutes,destination:'Work',energyLevel:3,priorities:[{activity:'presentation',significance:10,urgency:8},{activity:'lecture',significance:4,urgency:2}],context:{lectureDue:'Friday',presentationAfterArrival:true},utterances:state.answers},fallback);
-    state.commuteId=result.commuteId||state.commuteId;state.plan=(result.plan||fallback.plan).map(normalizeActivity);state.currentIndex=0;state.agentState='waiting_for_confirmation';render();say(result.spokenResponse||fallback.spokenResponse,listen);
+    const result=await api('/api/plan',{userId:'demo-user',commuteDurationMinutes:state.remainingMinutes,destination:'Work',priorities:[],context:{},utterances:state.qa},fallback);
+    if(result.commuteId&&!result.__offline){state.commuteId=result.commuteId;state.live=true}state.plan=(result.plan||fallback.plan).map(normalizeActivity);state.currentIndex=0;state.agentState='waiting_for_confirmation';render();say(result.spokenResponse||fallback.spokenResponse,listen);
   }
-  function normalizeActivity(x){const type=x.type==='presentation_prep'?'presentation':x.type==='email_roundup'?'email':x.type;const labels={email:'Email Briefing',presentation:'Presentation Prep',music:'Morning Mix',lecture:'Ornithology Lecture',arrival:'Arrival Summary'};const mins=x.minutes||x.duration||10;return{type,title:x.title||x.label||labels[type]||'Commute Activity',meta:x.meta||({email:'Priority messages',presentation:'Key points · rehearsal',music:'Your favorites',lecture:'Cornell · Week 4',arrival:'Your day at a glance'}[type]||''),minutes:mins,remaining:x.remaining||mins}}
+  function normalizeActivity(x){const type=({presentation_prep:'presentation',presentation_practice:'presentation',email_roundup:'email',event_summary:'email',arrival_summary:'arrival'})[x.type]||x.type;const labels={email:'Email Briefing',presentation:'Presentation Prep',music:'Morning Mix',lecture:'Ornithology Lecture',arrival:'Arrival Summary'};const mins=x.minutes||x.duration||10;return{type,title:x.title||x.label||labels[type]||'Commute Activity',meta:x.meta||({email:'Priority messages',presentation:'Key points · rehearsal',music:'Your favorites',lecture:'Cornell · Week 4',arrival:'Your day at a glance'}[type]||''),minutes:mins,remaining:x.remaining||mins,raw:x.raw||x.type,reported:0}}
   async function replan(feedback){
-    state.agentState='replanning';document.body.classList.add('replan');showNotice('Updating plan…','Lecture ↓ 12 min  ·  Music ↑ 20 min');
+    state.agentState='replanning';document.body.classList.add('replan');showNotice('Updating plan…','Asking the Coordinator');await reportProgress(state.plan[state.currentIndex]);
     const fallback={spokenResponse:"Got it. I’ll shorten the lecture and add another music block.",interruptCurrentActivity:true,updatedPlan:plans.lighter};
     const result=await api('/api/replan',{userId:'demo-user',commuteId:state.commuteId,remainingMinutes:state.remainingMinutes,currentActivity:state.plan[state.currentIndex]?.type,userFeedback:feedback,newEvents:[]},fallback);
-    setTimeout(()=>{if(result.interruptCurrentActivity)media('pause');state.plan=(result.updatedPlan||result.plan||fallback.updatedPlan).map(normalizeActivity);state.currentIndex=0;state.agentState='following_plan';render();document.body.classList.remove('replan');say(result.spokenResponse||fallback.spokenResponse)},750)
+    setTimeout(()=>{if(result.interruptCurrentActivity)media('pause');state.plan=(result.updatedPlan||result.plan||fallback.updatedPlan).map(normalizeActivity);state.currentIndex=0;state.agentState='following_plan';render();document.body.classList.remove('replan');if(!result.__offline)showNotice('Plan updated',`${result.reason||'Replanned'} · ${result.interpretedVia==='llm'?'AI':'rules'}`);say(result.spokenResponse||fallback.spokenResponse)},750)
   }
   async function triggerUrgentEmail(){
-    if(state.agentState==='interrupting')return;state.agentState='interrupting';setVoice('processing');
+    if(state.agentState==='interrupting')return;state.agentState='interrupting';setVoice('processing');await reportProgress(state.plan[state.currentIndex]);
     const fallback={interruptCurrentActivity:true,spokenResponse:'You just received an important email about your presentation. Would you like the summary?'};
-    const result=await api('/api/event',{commuteId:state.commuteId,type:'email',summary:'Boss says presentation slides changed.',sender:'Manager',timestamp:new Date().toISOString(),urgency:10,significance:9},fallback);
+    const result=await api('/api/event',{commuteId:state.commuteId,type:'email',summary:'Boss says presentation slides changed.',sender:'Manager',timestamp:new Date().toISOString(),urgency:10,significance:9,remainingMinutes:state.remainingMinutes,currentActivity:state.plan[state.currentIndex]?.type},fallback);
+    if(!result.__offline&&result.updatedPlan?.length){state.plan=result.updatedPlan.map(normalizeActivity);state.currentIndex=0;render()}
     if(result.interruptCurrentActivity!==false){media('pause');showNotice('Important email','Presentation slides changed','email');say(result.spokenResponse||fallback.spokenResponse,listen)}else{state.agentState='following_plan';showNotice('Email queued','I’ll include it in your next briefing.');setVoice('idle')}
   }
-  function advanceActivity(){state.currentIndex=(state.currentIndex+1)%state.plan.length;render()}
+  async function advanceActivity(){
+    const a=state.plan[state.currentIndex];
+    if(state.currentIndex>=state.plan.length-1){state.agentState='arrived';if(a)a.remaining=0;render();await reportProgress(a);await completeCommute();showNotice('You’ve arrived',state.live?'Trip saved. I’ll learn from this one.':'Sample trip finished.');return}
+    await reportProgress(a);state.currentIndex++;render()}
   function scheduleEmail(){clearTimeout(scheduleEmail.t);scheduleEmail.t=setTimeout(triggerUrgentEmail,45000)}
   $('mic').addEventListener('click',()=>{if(state.voiceState==='listening')return;if(!state.answers.length&&state.question===0&&state.agentState==='following_plan')beginPlanning();else listen()});
   document.addEventListener('keydown',e=>{if(e.key.toLowerCase()==='e')triggerUrgentEmail();if(e.key.toLowerCase()==='n')advanceActivity();if(e.key===' ') {$('mic').click();e.preventDefault()}});
-  setInterval(()=>{if(state.agentState!=='following_plan')return;const a=state.plan[state.currentIndex];if(!a)return;if(a.remaining>1)a.remaining--;else advanceActivity();if(state.remainingMinutes>1)state.remainingMinutes--;state.eta=new Date(Date.now()+state.remainingMinutes*60000);render()},60000);
+  setInterval(()=>{if(state.agentState!=='following_plan')return;const a=state.plan[state.currentIndex];if(!a)return;if(a.remaining>1)a.remaining--;else{a.remaining=0;advanceActivity()}if(state.remainingMinutes>1)state.remainingMinutes--;state.eta=new Date(Date.now()+state.remainingMinutes*60000);render()},60000);
   if(document.modelContext?.registerTool){
     const register=(tool)=>Promise.resolve(document.modelContext.registerTool(tool)).catch(()=>{});
     register({name:'replan_commute',title:'Replan commute',description:'Update the visible commute itinerary from a spoken preference.',inputSchema:{type:'object',properties:{feedback:{type:'string'}},required:['feedback'],additionalProperties:false},annotations:{readOnlyHint:false,untrustedContentHint:false},execute:async input=>{if(!input||typeof input.feedback!=='string'||!input.feedback.trim())throw new Error('feedback is required');await replan(input.feedback);return{status:'replanning',feedback:input.feedback}}});
