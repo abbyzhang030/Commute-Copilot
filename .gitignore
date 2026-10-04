@@ -18,6 +18,7 @@ node_modules/
 out/
 build/
 coverage/
+.data/
 
 # Local tooling and operating-system files
 .DS_Store
