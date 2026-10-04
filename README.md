@@ -9,7 +9,18 @@ npm run db:init          # creates tables + seeds demo-user (also auto-runs on b
 npm start                # frontend + Coordinator at http://localhost:8787
 npm run demo             # full demo scenario, in-process
 ```
-No credentials are required. With no `DATABASE_URL`, the backend uses embedded Postgres (PGlite, `.data/`). Voice intent uses the local deterministic keyword interpreter. External model, email, route, calendar, and media providers remain mocked or abstracted for later integration.
+No credentials are required for the fallback demo. With no `DATABASE_URL`, the backend uses embedded Postgres (PGlite, `.data/`). Configured model and Mapbox providers activate automatically; email, calendar, lecture, and media integrations keep their mock fallbacks.
+
+## Mapbox
+
+Add Mapbox tokens to the ignored local `.env` to enable the live map:
+
+```bash
+MAPBOX_PUBLIC_TOKEN=     # URL-restricted pk.* token used only by Mapbox GL JS
+MAPBOX_ACCESS_TOKEN=     # server-side token used for Search Box and Directions
+```
+
+The backend proxies Search Box `/suggest` + `/retrieve` and Directions requests. Directions use the `mapbox/driving-traffic` profile and return normalized route geometry, traffic-aware ETA, distance, and `remainingMinutes`. If either Mapbox API fails, the same endpoints return the simulated route so the Coordinator and demo remain usable.
 
 ## API (JSON)
 | Endpoint | Purpose |

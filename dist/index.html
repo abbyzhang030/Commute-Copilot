@@ -6,16 +6,17 @@
   <meta name="theme-color" content="#09100f" />
   <meta name="description" content="A voice-first commute copilot that keeps the route and day on track." />
   <title>Commute Copilot</title>
+  <link href="https://api.mapbox.com/mapbox-gl-js/v3.32.0/mapbox-gl.css" rel="stylesheet" />
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='18' fill='%2309100f'/%3E%3Cpath d='M14 44c12-1 8-25 22-25 8 0 8 10 14 10' fill='none' stroke='%238fffc1' stroke-width='6' stroke-linecap='round'/%3E%3Ccircle cx='14' cy='44' r='5' fill='%23fff'/%3E%3Ccircle cx='50' cy='29' r='5' fill='%238fffc1'/%3E%3C/svg%3E" />
   <style>
     :root { --ink:#f7faf7; --muted:#aab7b1; --mint:#8fffc1; --mint2:#d7ffe9; --sheet:rgba(8,15,14,.88); --line:rgba(255,255,255,.11); --shadow:0 22px 70px rgba(0,0,0,.4); font-family:Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; color-scheme:dark; }
     *{box-sizing:border-box} html,body{margin:0;min-height:100%;background:#09100f;color:var(--ink)} button{font:inherit} body{overflow:hidden}
     .app{height:100svh;min-height:650px;position:relative;background:#172420;isolation:isolate}
     .map{position:absolute;inset:0;background:#b9c5b9;overflow:hidden}
-    .map svg{width:100%;height:100%;display:block}
+    .map svg{width:100%;height:100%;display:block}.mock-map,#mapboxCanvas{position:absolute;inset:0}.mock-map{transition:opacity .35s}.map.mapbox-ready .mock-map{opacity:0;pointer-events:none}#mapboxCanvas{opacity:0;transition:opacity .35s}.map.mapbox-ready #mapboxCanvas{opacity:1}.mapboxgl-ctrl-bottom-left,.mapboxgl-ctrl-bottom-right{display:none}.mapboxgl-canvas{outline:none}
     .map:after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(4,12,10,.08) 0%,rgba(4,10,9,0) 36%,rgba(4,10,9,.2) 100%);pointer-events:none}
     .trip{position:absolute;z-index:2;top:max(22px,env(safe-area-inset-top));left:clamp(18px,4vw,52px);right:clamp(18px,4vw,52px);display:flex;align-items:flex-start;justify-content:space-between;gap:20px}
-    .destination{padding:15px 18px;background:rgba(8,15,14,.8);backdrop-filter:blur(18px) saturate(130%);-webkit-backdrop-filter:blur(18px) saturate(130%);border:1px solid rgba(255,255,255,.13);border-radius:19px;box-shadow:0 12px 32px rgba(0,0,0,.2)}
+    .destination{position:relative;padding:15px 18px;background:rgba(8,15,14,.8);backdrop-filter:blur(18px) saturate(130%);-webkit-backdrop-filter:blur(18px) saturate(130%);border:1px solid rgba(255,255,255,.13);border-radius:19px;box-shadow:0 12px 32px rgba(0,0,0,.2)}.destination-button{display:block;padding:0;border:0;background:none;color:inherit;text-align:left;cursor:pointer}.destination-button:focus-visible{outline:2px solid var(--mint);outline-offset:7px;border-radius:5px}.destination-search{display:none;position:absolute;top:calc(100% + 9px);left:0;width:min(390px,calc(100vw - 28px));padding:10px;background:rgba(8,15,14,.96);border:1px solid rgba(255,255,255,.14);border-radius:16px;box-shadow:0 18px 46px rgba(0,0,0,.35)}.destination-search.open{display:block}.destination-input{width:100%;min-height:48px;border:1px solid rgba(255,255,255,.15);border-radius:12px;background:rgba(255,255,255,.08);color:white;padding:0 13px;font-size:1rem;outline:none}.destination-input:focus{border-color:var(--mint)}.suggestions{display:grid;gap:3px;margin-top:7px}.suggestion{width:100%;border:0;border-radius:10px;background:transparent;color:white;text-align:left;padding:10px;cursor:pointer}.suggestion:hover,.suggestion:focus-visible{background:rgba(255,255,255,.09);outline:none}.suggestion strong,.suggestion span{display:block}.suggestion strong{font-size:.9rem}.suggestion span{font-size:.76rem;color:#aebbb4;margin-top:3px}
     .eyebrow{margin:0 0 4px;color:var(--mint);font-size:.76rem;line-height:1.1;font-weight:800;letter-spacing:.13em;text-transform:uppercase}.destination h1{margin:0;font-size:clamp(1.35rem,3vw,2rem);letter-spacing:-.035em;line-height:1.05}.address{margin:5px 0 0;color:#c6d1cb;font-size:.86rem}
     .time-card{text-align:right;color:#0a1712;text-shadow:0 1px 0 rgba(255,255,255,.22)}.remaining{font-size:clamp(1.6rem,4vw,2.7rem);font-weight:760;letter-spacing:-.055em;line-height:1}.eta{margin-top:7px;font-size:.9rem;font-weight:700}
     .route-label{position:absolute;z-index:2;top:27%;left:51%;transform:translateX(-50%);background:#f9fff8;color:#10231a;border-radius:12px;padding:8px 11px;box-shadow:0 6px 18px rgba(0,0,0,.18);font-size:.78rem;font-weight:800;display:flex;align-items:center;gap:6px}.route-label:before{content:"";width:7px;height:7px;border-radius:50%;background:#177cf0}
@@ -25,18 +26,20 @@
     .voice{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;min-width:122px}.mic{width:88px;height:88px;border:0;border-radius:50%;display:grid;place-items:center;cursor:pointer;color:#06110c;background:linear-gradient(145deg,#dfffee,#75f7b0);box-shadow:0 10px 34px rgba(64,255,150,.23),inset 0 1px 0 #fff;transition:transform .18s,box-shadow .2s}.mic:hover{transform:scale(1.025)}.mic:active{transform:scale(.96)}.mic:focus-visible{outline:3px solid white;outline-offset:4px}.mic svg{width:33px;height:33px}.voice-label{font-size:.86rem;font-weight:750;margin-top:11px}.voice-hint{font-size:.68rem;color:#87958e;margin-top:3px}.voice.listening .mic{animation:pulse 1.35s infinite;background:linear-gradient(145deg,#fff,#8fffc1)}.voice.speaking .mic{box-shadow:0 0 0 8px rgba(143,255,193,.12),0 0 0 16px rgba(143,255,193,.05)}
     @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(143,255,193,.35),0 10px 34px rgba(64,255,150,.26)}50%{box-shadow:0 0 0 18px rgba(143,255,193,0),0 10px 40px rgba(64,255,150,.4)}}
     .offline-badge{position:fixed;z-index:20;top:12px;left:50%;transform:translateX(-50%);display:none;background:#ffcd65;color:#211707;border-radius:999px;padding:6px 14px;font-size:.75rem;font-weight:760;box-shadow:0 6px 20px rgba(0,0,0,.25)}.offline-badge.show{display:block}
-    .notice{position:absolute;z-index:6;left:50%;top:19%;transform:translate(-50%,-10px);opacity:0;pointer-events:none;background:rgba(8,15,14,.92);color:white;border:1px solid rgba(255,255,255,.14);border-radius:18px;padding:14px 17px;box-shadow:0 16px 45px rgba(0,0,0,.32);backdrop-filter:blur(20px);min-width:min(390px,calc(100vw - 32px));display:flex;align-items:center;gap:13px;transition:opacity .25s,transform .25s}.notice.show{opacity:1;transform:translate(-50%,0)}.notice-icon{display:grid;place-items:center;width:38px;height:38px;border-radius:12px;background:#ffcd65;color:#211707}.notice strong{display:block;font-size:.9rem}.notice span{display:block;margin-top:3px;color:#aebbb4;font-size:.78rem}.notice.email .notice-icon{background:#ffcf68}
+    .notice{position:absolute;z-index:10;left:50%;top:19%;transform:translate(-50%,-10px);opacity:0;pointer-events:none;background:rgba(8,15,14,.92);color:white;border:1px solid rgba(255,255,255,.14);border-radius:18px;padding:14px 17px;box-shadow:0 16px 45px rgba(0,0,0,.32);backdrop-filter:blur(20px);min-width:min(390px,calc(100vw - 32px));display:flex;align-items:center;gap:13px;transition:opacity .25s,transform .25s}.notice.show{opacity:1;transform:translate(-50%,0)}.notice-icon{display:grid;place-items:center;width:38px;height:38px;border-radius:12px;background:#ffcd65;color:#211707}.notice strong{display:block;font-size:.9rem}.notice span{display:block;margin-top:3px;color:#aebbb4;font-size:.78rem}.notice.email .notice-icon{background:#ffcf68}
     .transcript{position:absolute;z-index:5;left:50%;bottom:calc(clamp(10px,2.5vw,34px) + 280px);transform:translateX(-50%);width:min(620px,calc(100vw - 32px));text-align:center;color:white;font-size:clamp(1rem,2.2vw,1.25rem);font-weight:650;line-height:1.35;text-shadow:0 2px 10px rgba(0,0,0,.65);opacity:0;transition:opacity .2s}.transcript.show{opacity:1}.transcript span{display:inline-block;background:rgba(7,15,13,.74);padding:10px 15px;border-radius:14px;backdrop-filter:blur(12px)}
     .replan .sheet{animation:sheetFlash .7s ease}.delta{color:var(--mint);font-weight:800}@keyframes sheetFlash{50%{border-color:rgba(143,255,193,.56);box-shadow:0 22px 80px rgba(22,226,116,.18)}}
+    .preflight{position:absolute;z-index:8;inset:0;display:none}.app.stage-select .preflight.select,.app.stage-confirm .preflight.confirm{display:flex}.app:not(.stage-driving)>.trip,.app:not(.stage-driving)>.sheet,.app:not(.stage-driving)>.route-label,.app:not(.stage-driving)>.transcript{display:none}.app.stage-select .map{filter:saturate(.72) brightness(.52)}.app.stage-select:after{content:"";position:absolute;z-index:7;inset:0;background:linear-gradient(180deg,rgba(5,12,10,.68),rgba(5,12,10,.3) 55%,rgba(5,12,10,.72));pointer-events:none}.select{align-items:flex-start;justify-content:center;padding:clamp(72px,13vh,140px) 20px}.select-panel{width:min(650px,100%);color:white}.select-kicker{font-size:.78rem;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:var(--mint);margin:0 0 16px}.select h1{font-size:clamp(2.3rem,7vw,4.8rem);line-height:.98;letter-spacing:-.06em;margin:0 0 30px}.origin-line{display:flex;align-items:center;gap:9px;color:#d7e2dc;font-size:.9rem;margin-top:16px}.origin-dot{width:9px;height:9px;border-radius:50%;background:#2387ff;box-shadow:0 0 0 5px rgba(35,135,255,.18)}.preflight-search{position:relative}.preflight-input{width:100%;height:72px;border:1px solid rgba(255,255,255,.22);border-radius:20px;background:rgba(7,15,13,.88);backdrop-filter:blur(20px);color:white;padding:0 22px;font-size:clamp(1.1rem,3vw,1.45rem);font-weight:650;box-shadow:0 20px 55px rgba(0,0,0,.28);outline:none}.preflight-input:focus{border-color:var(--mint);box-shadow:0 20px 55px rgba(0,0,0,.35),0 0 0 3px rgba(143,255,193,.1)}.preflight-suggestions{position:absolute;top:calc(100% + 9px);left:0;right:0;padding:7px;background:rgba(7,15,13,.96);border:1px solid rgba(255,255,255,.13);border-radius:17px;box-shadow:0 20px 55px rgba(0,0,0,.38);display:grid;gap:2px}.preflight-suggestions:empty{display:none}.preflight-suggestions .suggestion{padding:13px}.confirm{align-items:flex-end;justify-content:center;padding:20px 20px max(28px,env(safe-area-inset-bottom));pointer-events:none}.trip-confirm-card{pointer-events:auto;width:min(560px,100%);background:rgba(7,15,13,.91);backdrop-filter:blur(26px) saturate(140%);border:1px solid rgba(255,255,255,.15);border-radius:27px;padding:25px;box-shadow:var(--shadow);color:white}.confirm-label{margin:0 0 9px;color:var(--mint);font-size:.73rem;font-weight:800;letter-spacing:.15em;text-transform:uppercase}.trip-confirm-card h2{margin:0;font-size:clamp(1.55rem,5vw,2.35rem);line-height:1.05;letter-spacing:-.04em}.confirm-address{color:#aebbb4;margin:7px 0 21px;font-size:.9rem}.confirm-stats{display:flex;gap:10px;margin-bottom:22px}.confirm-stat{flex:1;padding:13px;background:rgba(255,255,255,.07);border-radius:14px}.confirm-stat strong,.confirm-stat span{display:block}.confirm-stat strong{font-size:1.15rem}.confirm-stat span{font-size:.7rem;color:#96a49d;text-transform:uppercase;letter-spacing:.08em;margin-top:4px}.start-commute{width:100%;min-height:60px;border:0;border-radius:17px;background:var(--mint);color:#07130e;font-weight:850;font-size:1.06rem;cursor:pointer}.start-commute:focus-visible{outline:3px solid white;outline-offset:3px}.change-destination{display:block;margin:14px auto 0;border:0;background:none;color:#aebbb4;font-weight:700;cursor:pointer}
     @media(max-width:760px){.app{min-height:590px}.trip{top:max(15px,env(safe-area-inset-top));left:14px;right:14px}.destination{padding:12px 14px}.address{display:none}.route-label{top:23%}.sheet{grid-template-columns:1fr auto;gap:18px;border-radius:26px;padding:19px}.up-next{grid-column:1/2;border:0;border-top:1px solid var(--line);padding:15px 0 0}.itinerary{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.up-item{grid-template-columns:28px 1fr}.up-icon{width:28px;height:28px}.up-min{display:none}.voice{grid-column:2/3;grid-row:1/3;align-self:center;min-width:94px}.mic{width:76px;height:76px}.voice-hint{display:none}.activity-title{font-size:1.25rem}.transcript{bottom:310px}.sheet{min-height:272px}.section-label{margin-bottom:9px}}
     @media(max-width:460px){.time-card .remaining{font-size:1.45rem}.eta{font-size:.8rem}.sheet{grid-template-columns:minmax(0,1fr) 78px;gap:13px;padding:17px}.activity-icon{width:42px;height:42px}.mic{width:68px;height:68px}.up-copy{font-size:.75rem}.up-item{display:flex;flex-direction:column;gap:5px;align-items:flex-start}.up-icon{width:26px;height:26px}.voice-label{font-size:.73rem}.trip{gap:8px}.destination h1{font-size:1.15rem}}
     @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
   </style>
 </head>
 <body>
-<main class="app" id="app">
-  <section class="map" aria-label="Route map from Oakland to work in San Francisco">
-    <svg viewBox="0 0 1400 900" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Map with a highlighted route across the Bay Bridge">
+<main class="app stage-select" id="app">
+  <section class="map" id="mapSurface" aria-label="Route map from Oakland to work in San Francisco">
+    <div id="mapboxCanvas" aria-hidden="true"></div>
+    <div class="mock-map" id="mockMap"><svg viewBox="0 0 1400 900" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Map with a highlighted route across the Bay Bridge">
       <defs><filter id="routeShadow"><feGaussianBlur stdDeviation="5"/></filter><pattern id="blocks" width="92" height="74" patternUnits="userSpaceOnUse"><path d="M8 7h63v44H8z" fill="#d8ded3"/><path d="M78 18h13v45H78z" fill="#a8b8a9"/></pattern></defs>
       <rect width="1400" height="900" fill="#9db9bf"/>
       <path d="M0 0H498L530 119 495 212 537 330 500 430 558 520 509 641 545 900H0Z" fill="#bdc7b6"/>
@@ -50,12 +53,23 @@
       <g transform="translate(330 760)"><circle r="25" fill="#fff" opacity=".95"/><path d="M0-17 13 14 0 9-13 14Z" fill="#137af1" stroke="#fff" stroke-width="3"/></g>
       <g transform="translate(1136 131)"><path d="M0 19c22-26 24-37 24-48A24 24 0 0 0-24-29c0 11 2 22 24 48z" fill="#0c1712"/><circle cy="-28" r="8" fill="#8fffc1"/></g>
       <g font-family="Inter, sans-serif" font-size="18" fill="#627067" font-weight="700" opacity=".85"><text x="125" y="455">OAKLAND</text><text x="1030" y="455">SAN FRANCISCO</text><text x="638" y="350" fill="#738d93" letter-spacing="4">BAY BRIDGE</text></g>
-    </svg>
+    </svg></div>
+  </section>
+
+  <section class="preflight select" aria-labelledby="destinationPrompt">
+    <div class="select-panel"><p class="select-kicker">Commute Copilot</p><h1 id="destinationPrompt">Where are you going?</h1><div class="preflight-search"><input class="preflight-input" id="startDestinationInput" type="search" autocomplete="off" placeholder="Search a place or address" aria-label="Destination"/><div class="preflight-suggestions" id="startSuggestions" role="listbox"></div></div><div class="origin-line"><span class="origin-dot"></span><span id="originLabel">Starting from your current location</span></div></div>
+  </section>
+
+  <section class="preflight confirm" aria-label="Confirm trip">
+    <div class="trip-confirm-card"><p class="confirm-label">Your trip</p><h2 id="confirmDestination">Destination</h2><p class="confirm-address" id="confirmAddress"></p><div class="confirm-stats"><div class="confirm-stat"><strong id="confirmTime">—</strong><span>Drive</span></div><div class="confirm-stat"><strong id="confirmDistance">—</strong><span>Distance</span></div><div class="confirm-stat"><strong id="confirmTraffic">—</strong><span>Traffic</span></div></div><button class="start-commute" id="startCommute" type="button">Start commute</button><button class="change-destination" id="changeDestination" type="button">Change destination</button></div>
   </section>
 
   <div class="offline-badge" id="offlineBadge" role="status" aria-live="polite">Offline fallback · showing sample data</div>
   <header class="trip">
-    <div class="destination"><p class="eyebrow">Destination</p><h1>To Work</h1><p class="address">Market Street, San Francisco</p></div>
+    <div class="destination">
+      <button class="destination-button" id="destinationButton" aria-expanded="false" aria-controls="destinationSearch"><p class="eyebrow">Destination</p><h1 id="destinationName">To Work</h1><p class="address" id="destinationAddress">Market Street, San Francisco</p></button>
+      <div class="destination-search" id="destinationSearch"><input class="destination-input" id="destinationInput" type="search" autocomplete="off" placeholder="Where are you going?" aria-label="Search destination"/><div class="suggestions" id="suggestions" role="listbox"></div></div>
+    </div>
     <div class="time-card"><div class="remaining" id="tripRemaining">1h 42m</div><div class="eta">ETA <span id="eta">10:59 AM</span></div></div>
   </header>
   <div class="route-label" id="routeLabel">I-80 W · Clear</div>
@@ -99,8 +113,60 @@
       {type:'arrival',title:'Arrival Summary',meta:'Presentation checklist',minutes:5,remaining:5}
     ]
   };
-  const state={commuteId:'commute-demo-01',remainingMinutes:102,eta:new Date(Date.now()+102*60000),plan:plans.initial.map(x=>({...x})),currentIndex:3,voiceState:'idle',agentState:'following_plan',question:0,answers:[],qa:[],alert:null,live:false,offline:false};
+  const state={stage:'select',commuteId:'commute-demo-01',destinationName:'',destinationAddress:'',origin:[-122.2711,37.8044],destinationCoordinate:null,distanceMeters:0,traffic:'',roadSummary:'',routeProvider:'mock',remainingMinutes:0,eta:new Date(),plan:plans.initial.map(x=>({...x})),currentIndex:3,voiceState:'idle',agentState:'waiting_for_confirmation',question:0,answers:[],qa:[],alert:null,live:false,offline:false};
   const $=id=>document.getElementById(id); $('mic').innerHTML=icons.mic;
+  let commuteMap=null,originMarker=null,destinationMarker=null,searchTimer=null,searchSession=crypto.randomUUID();
+
+  function loadMapboxScript(){return new Promise((resolve,reject)=>{if(window.mapboxgl)return resolve();const s=document.createElement('script');s.src='https://api.mapbox.com/mapbox-gl-js/v3.32.0/mapbox-gl.js';s.onload=resolve;s.onerror=reject;document.head.appendChild(s)})}
+  async function initializeMap(){
+    try{
+      const config=await fetch('/api/map/config').then(r=>r.ok?r.json():Promise.reject());
+      if(config.provider!=='mapbox'||!config.publicToken)return;
+      await loadMapboxScript();window.mapboxgl.accessToken=config.publicToken;
+      commuteMap=new mapboxgl.Map({container:'mapboxCanvas',style:'mapbox://styles/mapbox/navigation-day-v1',center:state.origin,zoom:11,attributionControl:false,interactive:false});
+      commuteMap.on('load',()=>{ $('mapSurface').classList.add('mapbox-ready'); if(state.destinationCoordinate)loadRoute(); });
+    }catch{state.routeProvider='mock'}
+  }
+  function routeParams(){const p=new URLSearchParams({origin:state.origin.join(','),destination:state.destinationCoordinate.join(','),destinationName:state.destinationName});return p}
+  async function loadRoute(updateMap=true){
+    try{
+      const route=await fetch(`/api/map/directions?${routeParams()}`).then(r=>r.ok?r.json():Promise.reject());
+      state.routeProvider=route.provider;state.remainingMinutes=route.remainingMinutes;state.eta=new Date(route.eta);state.distanceMeters=route.distanceMeters;state.traffic=route.congestion;state.roadSummary=route.roadSummary;
+      $('routeLabel').textContent=`${route.roadSummary||'Fastest route'} · ${route.congestion==='heavy'?'Heavy traffic':route.congestion==='moderate'?'Some traffic':'Clear'}`;render();
+      if(commuteMap&&updateMap){
+        const data={type:'Feature',properties:{},geometry:route.geometry};const source=commuteMap.getSource('commute-route');
+        if(source)source.setData(data);else{commuteMap.addSource('commute-route',{type:'geojson',data});commuteMap.addLayer({id:'commute-route-glow',type:'line',source:'commute-route',paint:{'line-color':'#0b1720','line-width':11,'line-opacity':.3}});commuteMap.addLayer({id:'commute-route',type:'line',source:'commute-route',paint:{'line-color':'#2387ff','line-width':6}})}
+        originMarker?.remove();destinationMarker?.remove();originMarker=new mapboxgl.Marker({color:'#2387ff'}).setLngLat(state.origin).addTo(commuteMap);destinationMarker=new mapboxgl.Marker({color:'#101a16'}).setLngLat(state.destinationCoordinate).addTo(commuteMap);
+        const bounds=route.geometry.coordinates.reduce((b,c)=>b.extend(c),new mapboxgl.LngLatBounds(route.geometry.coordinates[0],route.geometry.coordinates[0]));commuteMap.fitBounds(bounds,{padding:{top:110,bottom:310,left:70,right:70},duration:900});
+      }return route
+    }catch{state.routeProvider='mock';throw new Error('route unavailable')}
+  }
+  async function findDestinations(query,targetId='suggestions'){
+    if(query.trim().length<2){$(targetId).innerHTML='';return}
+    try{const p=new URLSearchParams({q:query,sessionToken:searchSession,proximity:state.origin.join(',')});const data=await fetch(`/api/map/search?${p}`).then(r=>r.json());$(targetId).innerHTML=(data.suggestions||[]).map(s=>`<button class="suggestion" type="button" data-id="${escapeHtml(s.id)}"><strong>${escapeHtml(s.name)}</strong><span>${escapeHtml(s.fullAddress||s.address)}</span></button>`).join('')}catch{$(targetId).innerHTML=''}
+  }
+  function escapeHtml(value){return String(value??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
+  async function chooseDestination(id){
+    try{const p=new URLSearchParams({sessionToken:searchSession});const place=await fetch(`/api/map/retrieve/${encodeURIComponent(id)}?${p}`).then(r=>r.json());state.destinationName=place.name;state.destinationAddress=place.address;state.destinationCoordinate=place.coordinate;$('destinationName').textContent=`To ${place.name}`;$('destinationAddress').textContent=place.address;closeDestinationSearch();searchSession=crypto.randomUUID();await loadRoute();showNotice('Route updated',`${fmtTrip(state.remainingMinutes)} to ${place.name}`)}catch{showNotice('Keeping current route','Destination search is unavailable right now.')}
+  }
+  function closeDestinationSearch(){$('destinationSearch').classList.remove('open');$('destinationButton').setAttribute('aria-expanded','false')}
+  function setStage(stage){state.stage=stage;$('app').classList.remove('stage-select','stage-confirm','stage-driving');$('app').classList.add(`stage-${stage}`)}
+  async function selectStartDestination(id){
+    try{
+      $('startSuggestions').innerHTML='';$('startDestinationInput').disabled=true;
+      const p=new URLSearchParams({sessionToken:searchSession});const place=await fetch(`/api/map/retrieve/${encodeURIComponent(id)}?${p}`).then(r=>r.ok?r.json():Promise.reject());
+      state.destinationName=place.name;state.destinationAddress=place.address;state.destinationCoordinate=place.coordinate;searchSession=crypto.randomUUID();
+      const route=await loadRoute();
+      $('destinationName').textContent=`To ${place.name}`;$('destinationAddress').textContent=place.address;
+      $('confirmDestination').textContent=place.name;$('confirmAddress').textContent=place.address;
+      $('confirmTime').textContent=fmtTrip(route.remainingMinutes);$('confirmDistance').textContent=`${(route.distanceMeters/1609.344).toFixed(1)} mi`;
+      $('confirmTraffic').textContent=route.congestion==='heavy'?'Heavy':route.congestion==='moderate'?'Moderate':'Light';setStage('confirm');
+    }catch{showNotice('Couldn’t calculate route','Try another destination.');$('startDestinationInput').disabled=false}
+  }
+  function locateOrigin(){
+    if(!navigator.geolocation)return;
+    navigator.geolocation.getCurrentPosition(pos=>{state.origin=[pos.coords.longitude,pos.coords.latitude];$('originLabel').textContent='Starting from your current location';if(commuteMap&&!state.destinationCoordinate)commuteMap.easeTo({center:state.origin,zoom:12,duration:700})},()=>{$('originLabel').textContent='Using your approximate current location'},{enableHighAccuracy:true,timeout:7000,maximumAge:60000});
+  }
 
   function fmtTime(d){return d.toLocaleTimeString([], {hour:'numeric',minute:'2-digit'}).replace(' ',' ')}
   function fmtTrip(m){return m>=60?`${Math.floor(m/60)}h ${m%60}m`:`${m} min`}
@@ -137,8 +203,8 @@
     if(!state.live)return;try{await fetch('/api/complete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({commuteId:state.commuteId})})}catch(err){console.warn('[complete] failed',err)}
   }
   function media(action){fetch(`/api/media/${action}`,{method:'POST'}).catch(()=>{})}
-  const prompts=["What matters most during this drive?","How important is your ornithology lecture today?","Do you want a productive drive or something lighter?"];
-  function beginPlanning(){state.question=0;state.answers=[];state.qa=[];say(prompts[0],listen)}
+  const prompts=["","How important is your ornithology lecture today?","Do you want a productive drive or something lighter?"];
+  function beginPlanning(){state.question=0;state.answers=[];state.qa=[];prompts[0]=`You have about ${fmtTrip(state.remainingMinutes)} to ${state.destinationName}. What matters most during this drive?`;say(prompts[0],listen)}
   function listen(){
     setVoice('listening');
     const Recognition=window.SpeechRecognition||window.webkitSpeechRecognition;
@@ -161,7 +227,7 @@
   }
   async function createPlan(){
     const fallback={spokenResponse:"You have just under two hours. Since your presentation is important and you’re feeling tired, I’ll prioritize presentation prep, keep the lecture short, and add music breaks. Sound good?",plan:plans.initial};
-    const result=await api('/api/plan',{userId:'demo-user',commuteDurationMinutes:state.remainingMinutes,destination:'Work',priorities:[],context:{},utterances:state.qa},fallback);
+    const result=await api('/api/plan',{userId:'demo-user',commuteDurationMinutes:state.remainingMinutes,destination:state.destinationName,eta:state.eta.toISOString(),priorities:[],context:{routeProvider:state.routeProvider,distanceMeters:state.distanceMeters,traffic:state.traffic,roadSummary:state.roadSummary},utterances:state.qa},fallback);
     if(result.commuteId&&!result.__offline){state.commuteId=result.commuteId;state.live=true}state.plan=(result.plan||fallback.plan).map(normalizeActivity);state.currentIndex=0;state.agentState='waiting_for_confirmation';render();say(result.spokenResponse||fallback.spokenResponse,listen);
   }
   function normalizeActivity(x){const type=({presentation_prep:'presentation',presentation_practice:'presentation',email_roundup:'email',event_summary:'email',arrival_summary:'arrival'})[x.type]||x.type;const labels={email:'Email Briefing',presentation:'Presentation Prep',music:'Morning Mix',lecture:'Ornithology Lecture',arrival:'Arrival Summary'};const mins=x.minutes||x.duration||10;return{type,title:x.title||x.label||labels[type]||'Commute Activity',meta:x.meta||({email:'Priority messages',presentation:'Key points · rehearsal',music:'Your favorites',lecture:'Cornell · Week 4',arrival:'Your day at a glance'}[type]||''),minutes:mins,remaining:x.remaining||mins,raw:x.raw||x.type,reported:0}}
@@ -184,14 +250,23 @@
     await reportProgress(a);state.currentIndex++;render()}
   function scheduleEmail(){clearTimeout(scheduleEmail.t);scheduleEmail.t=setTimeout(triggerUrgentEmail,45000)}
   $('mic').addEventListener('click',()=>{if(state.voiceState==='listening')return;if(!state.answers.length&&state.question===0&&state.agentState==='following_plan')beginPlanning();else listen()});
-  document.addEventListener('keydown',e=>{if(e.key.toLowerCase()==='e')triggerUrgentEmail();if(e.key.toLowerCase()==='n')advanceActivity();if(e.key===' ') {$('mic').click();e.preventDefault()}});
-  setInterval(()=>{if(state.agentState!=='following_plan')return;const a=state.plan[state.currentIndex];if(!a)return;if(a.remaining>1)a.remaining--;else{a.remaining=0;advanceActivity()}if(state.remainingMinutes>1)state.remainingMinutes--;state.eta=new Date(Date.now()+state.remainingMinutes*60000);render()},60000);
+  $('destinationButton').addEventListener('click',()=>{const open=!$('destinationSearch').classList.contains('open');$('destinationSearch').classList.toggle('open',open);$('destinationButton').setAttribute('aria-expanded',String(open));if(open)$('destinationInput').focus()});
+  $('destinationInput').addEventListener('input',e=>{clearTimeout(searchTimer);searchTimer=setTimeout(()=>findDestinations(e.target.value),220)});
+  $('suggestions').addEventListener('click',e=>{const button=e.target.closest('[data-id]');if(button)chooseDestination(button.dataset.id)});
+  $('startDestinationInput').addEventListener('input',e=>{clearTimeout(searchTimer);searchTimer=setTimeout(()=>findDestinations(e.target.value,'startSuggestions'),220)});
+  $('startSuggestions').addEventListener('click',e=>{const button=e.target.closest('[data-id]');if(button)selectStartDestination(button.dataset.id)});
+  $('startCommute').addEventListener('click',()=>{state.agentState='following_plan';setStage('driving');beginPlanning()});
+  $('changeDestination').addEventListener('click',()=>{state.destinationCoordinate=null;state.destinationName='';state.destinationAddress='';$('startDestinationInput').disabled=false;$('startDestinationInput').value='';setStage('select');setTimeout(()=>$('startDestinationInput').focus(),0)});
+  document.addEventListener('click',e=>{if(!e.target.closest('.destination'))closeDestinationSearch()});
+  document.addEventListener('keydown',e=>{if(e.target.matches('input'))return;if(e.key.toLowerCase()==='e')triggerUrgentEmail();if(e.key.toLowerCase()==='n')advanceActivity();if(e.key===' ') {$('mic').click();e.preventDefault()}});
+  setInterval(()=>{if(state.stage!=='driving'||state.agentState!=='following_plan')return;const a=state.plan[state.currentIndex];if(!a)return;if(a.remaining>1)a.remaining--;else{a.remaining=0;advanceActivity()}if(state.remainingMinutes>1)state.remainingMinutes--;state.eta=new Date(Date.now()+state.remainingMinutes*60000);render()},60000);
+  setInterval(()=>{if(state.stage==='driving')loadRoute(false).catch(()=>{})},300000);
   if(document.modelContext?.registerTool){
     const register=(tool)=>Promise.resolve(document.modelContext.registerTool(tool)).catch(()=>{});
     register({name:'replan_commute',title:'Replan commute',description:'Update the visible commute itinerary from a spoken preference.',inputSchema:{type:'object',properties:{feedback:{type:'string'}},required:['feedback'],additionalProperties:false},annotations:{readOnlyHint:false,untrustedContentHint:false},execute:async input=>{if(!input||typeof input.feedback!=='string'||!input.feedback.trim())throw new Error('feedback is required');await replan(input.feedback);return{status:'replanning',feedback:input.feedback}}});
     register({name:'report_urgent_email',title:'Report urgent email',description:'Send an urgent presentation email event to the commute Coordinator and update the visible interruption state.',inputSchema:{type:'object',properties:{summary:{type:'string'}},required:['summary'],additionalProperties:false},annotations:{readOnlyHint:false,untrustedContentHint:true},execute:async input=>{if(!input||typeof input.summary!=='string'||!input.summary.trim())throw new Error('summary is required');await triggerUrgentEmail();return{status:'interrupting',summary:input.summary}}});
   }
-  render();
+  render();locateOrigin();initializeMap();setTimeout(()=>$('startDestinationInput').focus(),150);
 </script>
 </body>
 </html>
