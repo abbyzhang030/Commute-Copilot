@@ -10,7 +10,7 @@ npm run db:init          # creates tables + seeds demo-user (also auto-runs on b
 npm start                # http://localhost:8787
 npm run demo             # full demo scenario, in-process
 ```
-No `DATABASE_URL` → embedded Postgres (PGlite, `.data/`). No `ANTHROPIC_API_KEY` → keyword interpreter instead of the Mastra agent.
+No `DATABASE_URL` → embedded Postgres (PGlite, `.data/`). LLM: `NEON_AI_GATEWAY_TOKEN` + `NEON_AI_GATEWAY_BASE_URL` (Neon credits) → else `ANTHROPIC_API_KEY` → else keyword interpreter.
 
 ## API (JSON)
 | Endpoint | Purpose |

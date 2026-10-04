@@ -67,18 +67,36 @@ const tools = {
   getLectureContext: createTool({ id: "getLectureContext", description: "Lecture content and due date (mocked).", inputSchema: userKey, execute: async ({ context }) => getLectureContext(context.userId) }),
 };
 
+/**
+ * Model routing. Preferred: Neon AI Gateway (OpenAI-compatible, billed to Neon credits).
+ * Fallback: direct Anthropic key. Neither set -> keyword interpreter.
+ */
+function resolveModel(): any {
+  const token = process.env.NEON_AI_GATEWAY_TOKEN;
+  const base = process.env.NEON_AI_GATEWAY_BASE_URL?.replace(/\/+$/, "");
+  if (token && base) {
+    const url = process.env.NEON_AI_GATEWAY_CHAT_URL ?? `${base}/v1`;
+    return { id: `neon/${process.env.COORDINATOR_MODEL ?? "claude-haiku-4-5"}`, url, apiKey: token };
+  }
+  return process.env.COORDINATOR_MODEL?.includes("/") ? process.env.COORDINATOR_MODEL : "anthropic/claude-haiku-4-5";
+}
+
 let agent: Agent | null = null;
 export function getCoordinatorAgent(): Agent {
   agent ??= new Agent({
     name: "commute-coordinator",
     instructions: COORDINATOR_INSTRUCTIONS,
-    model: (process.env.COORDINATOR_MODEL ?? "anthropic/claude-haiku-4-5") as any,
-    tools,
+    model: resolveModel(),
+    // The gateway's chat endpoint doesn't document tool calling, so read tools are opt-in (AGENT_TOOLS=1).
+    // The prompt already embeds the context the interpreter needs.
+    ...(process.env.AGENT_TOOLS === "1" ? { tools } : {}),
   });
   return agent;
 }
 
-export const llmEnabled = () => !!process.env.ANTHROPIC_API_KEY && process.env.DISABLE_LLM !== "1";
+export const llmEnabled = () =>
+  process.env.DISABLE_LLM !== "1" &&
+  (!!(process.env.NEON_AI_GATEWAY_TOKEN && process.env.NEON_AI_GATEWAY_BASE_URL) || !!process.env.ANTHROPIC_API_KEY);
 
 const withTimeout = <T>(p: Promise<T>, ms: number) =>
   Promise.race([p, new Promise<T>((_, rej) => setTimeout(() => rej(new Error("llm timeout")), ms))]);
@@ -91,7 +109,7 @@ export async function interpretUtterance(text: string, ctx: Record<string, unkno
       const res: any = await withTimeout(
         getCoordinatorAgent().generate(
           `Commute context: ${JSON.stringify(ctx)}\nUser said: "${text}"\nInterpret into the schema. Only set fields the user actually implied.`,
-          { output: Interpretation, maxSteps: 3 } as any),
+          { output: Interpretation, maxSteps: process.env.AGENT_TOOLS === "1" ? 3 : 1 } as any),
         Number(process.env.LLM_TIMEOUT_MS ?? 8000));
       const parsed = Interpretation.safeParse(res.object);
       if (parsed.success) return { result: parsed.data, via: "llm" };
