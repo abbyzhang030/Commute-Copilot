@@ -80,7 +80,7 @@ export const PlanRequest = z.object({
   })).default([]),
   context: z.record(z.any()).default({}),
   /** Optional raw voice answers; interpreted into priorities/energy. */
-  utterances: z.array(z.string()).default([]),
+  utterances: z.array(z.union([z.string(), z.object({ question: z.string().optional(), answer: z.string() })])).default([]),
   eta: z.string().optional(),
 });
 

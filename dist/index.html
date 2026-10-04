@@ -25,6 +25,8 @@
     .up-next{min-width:0;border-left:1px solid var(--line);padding-left:clamp(22px,4vw,44px)}.itinerary{display:grid;gap:10px}.up-item{display:grid;grid-template-columns:32px 1fr auto;gap:10px;align-items:center;min-width:0;transition:opacity .25s,transform .35s}.up-icon{width:32px;height:32px;border-radius:10px;background:rgba(255,255,255,.08);color:#d8e4dd}.up-copy{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:.91rem;font-weight:700}.up-min{color:#9caaa3;font-size:.8rem;font-weight:700;white-space:nowrap}
     .voice{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;min-width:122px}.mic{width:88px;height:88px;border:0;border-radius:50%;display:grid;place-items:center;cursor:pointer;color:#06110c;background:linear-gradient(145deg,#dfffee,#75f7b0);box-shadow:0 10px 34px rgba(64,255,150,.23),inset 0 1px 0 #fff;transition:transform .18s,box-shadow .2s}.mic:hover{transform:scale(1.025)}.mic:active{transform:scale(.96)}.mic:focus-visible{outline:3px solid white;outline-offset:4px}.mic svg{width:33px;height:33px}.voice-label{font-size:.86rem;font-weight:750;margin-top:11px}.voice-hint{font-size:.68rem;color:#87958e;margin-top:3px}.voice.listening .mic{animation:pulse 1.35s infinite;background:linear-gradient(145deg,#fff,#8fffc1)}.voice.speaking .mic{box-shadow:0 0 0 8px rgba(143,255,193,.12),0 0 0 16px rgba(143,255,193,.05)}
     @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(143,255,193,.35),0 10px 34px rgba(64,255,150,.26)}50%{box-shadow:0 0 0 18px rgba(143,255,193,0),0 10px 40px rgba(64,255,150,.4)}}
+    .type-form{display:none;margin-top:8px;gap:4px;width:100%}.type-form.show{display:flex}.type-form input{min-width:0;flex:1;width:96px;border:1px solid rgba(255,255,255,.3);border-radius:10px;padding:6px 8px;font-size:.75rem;background:rgba(255,255,255,.92);color:#0a1712}.type-form button{border:0;border-radius:10px;padding:6px 9px;font-size:.75rem;font-weight:700;background:#75f7b0;color:#06110c;cursor:pointer}
+    .offline-badge{position:fixed;z-index:20;top:12px;left:50%;transform:translateX(-50%);display:none;background:#ffcd65;color:#211707;border-radius:999px;padding:6px 14px;font-size:.75rem;font-weight:760;box-shadow:0 6px 20px rgba(0,0,0,.25)}.offline-badge.show{display:block}
     .notice{position:absolute;z-index:10;left:50%;top:19%;transform:translate(-50%,-10px);opacity:0;pointer-events:none;background:rgba(8,15,14,.92);color:white;border:1px solid rgba(255,255,255,.14);border-radius:18px;padding:14px 17px;box-shadow:0 16px 45px rgba(0,0,0,.32);backdrop-filter:blur(20px);min-width:min(390px,calc(100vw - 32px));display:flex;align-items:center;gap:13px;transition:opacity .25s,transform .25s}.notice.show{opacity:1;transform:translate(-50%,0)}.notice-icon{display:grid;place-items:center;width:38px;height:38px;border-radius:12px;background:#ffcd65;color:#211707}.notice strong{display:block;font-size:.9rem}.notice span{display:block;margin-top:3px;color:#aebbb4;font-size:.78rem}.notice.email .notice-icon{background:#ffcf68}
     .transcript{position:absolute;z-index:5;left:50%;bottom:calc(clamp(10px,2.5vw,34px) + 280px);transform:translateX(-50%);width:min(620px,calc(100vw - 32px));text-align:center;color:white;font-size:clamp(1rem,2.2vw,1.25rem);font-weight:650;line-height:1.35;text-shadow:0 2px 10px rgba(0,0,0,.65);opacity:0;transition:opacity .2s}.transcript.show{opacity:1}.transcript span{display:inline-block;background:rgba(7,15,13,.74);padding:10px 15px;border-radius:14px;backdrop-filter:blur(12px)}
     .replan .sheet{animation:sheetFlash .7s ease}.delta{color:var(--mint);font-weight:800}@keyframes sheetFlash{50%{border-color:rgba(143,255,193,.56);box-shadow:0 22px 80px rgba(22,226,116,.18)}}
@@ -65,6 +67,7 @@
     <div class="trip-confirm-card"><p class="confirm-label">Your trip</p><h2 id="confirmDestination">Destination</h2><p class="confirm-address" id="confirmAddress"></p><div class="confirm-stats"><div class="confirm-stat"><strong id="confirmTime">—</strong><span>Drive</span></div><div class="confirm-stat"><strong id="confirmDistance">—</strong><span>Distance</span></div><div class="confirm-stat"><strong id="confirmTraffic">—</strong><span>Traffic</span></div></div><button class="start-commute" id="startCommute" type="button">Start commute</button><button class="change-destination" id="changeDestination" type="button">Change destination</button></div>
   </section>
 
+  <div class="offline-badge" id="offlineBadge" role="status" aria-live="polite">Offline fallback · showing sample data</div>
   <header class="trip">
     <div class="destination">
       <button class="destination-button" id="destinationButton" aria-expanded="false" aria-controls="destinationSearch"><p class="eyebrow">Destination</p><h1 id="destinationName">To Work</h1><p class="address" id="destinationAddress">Market Street, San Francisco</p></button>
@@ -85,7 +88,7 @@
       <div class="progress" role="progressbar" aria-label="Current activity progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="40"><span id="progressBar"></span></div>
     </div>
     <div class="up-next"><p class="section-label">Up next</p><div class="itinerary" id="itinerary"></div></div>
-    <div class="voice" id="voice"><button class="mic" id="mic" aria-label="Talk to Commute Copilot" aria-pressed="false"></button><div class="voice-label" id="voiceLabel">Agent ready</div><div class="voice-hint">Tap to speak</div></div>
+    <div class="voice" id="voice"><button class="mic" id="mic" aria-label="Talk to Commute Copilot" aria-pressed="false"></button><div class="voice-label" id="voiceLabel">Agent ready</div><div class="voice-hint">Tap to speak</div><form class="type-form" id="typeForm"><input id="typeInput" type="text" placeholder="Or type…" aria-label="Type your answer" autocomplete="off"><button type="submit">Send</button></form></div>
   </section>
 </main>
 <script src="/music-service.js"></script>
@@ -114,7 +117,7 @@
       {type:'arrival',title:'Arrival Summary',meta:'Presentation checklist',minutes:5,remaining:5}
     ]
   };
-  const state={stage:'select',commuteId:'commute-demo-01',destinationName:'',destinationAddress:'',origin:[-122.2711,37.8044],destinationCoordinate:null,distanceMeters:0,traffic:'',roadSummary:'',routeProvider:'mock',remainingMinutes:0,eta:new Date(),plan:plans.initial.map(x=>({...x})),currentIndex:3,voiceState:'idle',agentState:'waiting_for_confirmation',question:0,answers:[],alert:null};
+  const state={stage:'select',commuteId:'commute-demo-01',destinationName:'',destinationAddress:'',origin:[-122.2711,37.8044],destinationCoordinate:null,distanceMeters:0,traffic:'',roadSummary:'',routeProvider:'mock',remainingMinutes:0,eta:new Date(),plan:plans.initial.map(x=>({...x})),currentIndex:3,voiceState:'idle',agentState:'waiting_for_confirmation',question:0,answers:[],qa:[],alert:null,live:false,offline:false};
   const $=id=>document.getElementById(id); $('mic').innerHTML=icons.mic;
   let commuteMap=null,originMarker=null,destinationMarker=null,searchTimer=null,searchSession=crypto.randomUUID();
   let musicService=new CommuteMusic.MockMusicService(),musicSnapshot=musicService.getState(),lastActivityKey=null,activeLectureNarration=null,speechRunId=0,lastEmailIds=[];
@@ -233,28 +236,62 @@
   }
   function setVoice(mode,label){state.voiceState=mode; $('voice').className=`voice ${mode}`; $('voiceLabel').textContent=label||({idle:'Agent ready',listening:'Listening…',processing:'Thinking…',speaking:'Agent speaking…'}[mode]); $('mic').setAttribute('aria-pressed',mode==='listening')}
   function showNotice(title,body,kind=''){ $('noticeTitle').textContent=title;$('noticeBody').textContent=body;$('notice').className=`notice ${kind} show`;clearTimeout(showNotice.t);showNotice.t=setTimeout(()=>$('notice').classList.remove('show'),4200)}
+  let skipSpeech=null;
   function say(text,after,displayText=text,kind='agent'){
     const runId=++speechRunId;if(kind!=='agent')activeLectureNarration=currentActivity()?.lessonId||currentActivity()?.presentationId||currentActivity()?.title||kind;
     const resumeAfterSpeech=shouldResumeMusic();if(resumeAfterSpeech)media('pause');
     setVoice('speaking');$('transcript').querySelector('span').textContent=displayText;$('transcript').classList.add('show');
     const expectedMs=kind!=='agent'?(currentActivity()?.minutes||5)*60000:Math.max(3500,text.length*55);
     if('speechSynthesis'in window){speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);u.rate=kind!=='agent'?.82:1.02;u.pitch=.97;u.onend=done;u.onerror=done;speechSynthesis.speak(u);setTimeout(done,expectedMs+15000)}else setTimeout(done,expectedMs);
-    let ran=false;function done(){if(ran||runId!==speechRunId)return;ran=true;if(kind!=='agent')activeLectureNarration=null;$('transcript').classList.remove('show');setVoice('idle');after?.();if(resumeAfterSpeech&&shouldResumeMusic())media('play');syncActivityAudio().catch(()=>{})}
+    let ran=false;if(kind==='agent')skipSpeech=()=>done();function done(){if(ran||runId!==speechRunId)return;ran=true;skipSpeech=null;if(kind!=='agent')activeLectureNarration=null;$('transcript').classList.remove('show');setVoice('idle');after?.();if(resumeAfterSpeech&&shouldResumeMusic())media('play');syncActivityAudio().catch(()=>{})}
   }
+  function setOffline(on,why){state.offline=on;$('offlineBadge').classList.toggle('show',on);if(on)$('offlineBadge').textContent=`Offline fallback · ${why||'backend unavailable'} · showing sample data`}
+  // Backend calls can include a database round-trip plus an LLM call, so allow 20s. Any failure is logged and shown via the badge.
   async function api(path,payload,fallback){
-    try{const ctrl=new AbortController();setTimeout(()=>ctrl.abort(),2200);const res=await fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),signal:ctrl.signal});if(!res.ok)throw 0;return await res.json()}catch{return fallback}
+    const ctrl=new AbortController();const timer=setTimeout(()=>ctrl.abort(),20000);
+    try{const res=await fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),signal:ctrl.signal});if(!res.ok)throw new Error(`HTTP ${res.status}`);const json=await res.json();setOffline(false);return json}
+    catch(err){console.warn('[api] offline fallback for',path,err);setOffline(true,err.name==='AbortError'?'timed out':String(err.message||err));return{...fallback,__offline:true}}
+    finally{clearTimeout(timer)}
+  }
+  // Tell the Coordinator what actually happened so replans credit finished work and learning gets real data.
+  async function reportProgress(a){
+    if(!state.live||!a||!a.raw)return;const elapsed=a.minutes-a.remaining,delta=elapsed-(a.reported||0);if(delta<=0)return;a.reported=elapsed;
+    try{await fetch('/api/activity-result',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({commuteId:state.commuteId,type:a.raw,actualMinutes:delta})})}catch(err){console.warn('[activity-result] failed',err)}
+  }
+  async function completeCommute(){
+    if(!state.live)return;try{await fetch('/api/complete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({commuteId:state.commuteId})})}catch(err){console.warn('[complete] failed',err)}
   }
   async function media(action){const method=action==='play'?'resume':action;if(typeof musicService[method]==='function')return musicService[method]();return false}
   const prompts=["","How important is your ornithology lecture today?","Do you want a productive drive or something lighter?"];
-  function beginPlanning(){state.question=0;state.answers=[];prompts[0]=`You have about ${fmtTrip(state.remainingMinutes)} to ${state.destinationName}. What matters most during this drive?`;say(prompts[0],listen)}
-  function listen(){
-    stopLectureNarration();
-    setVoice('listening');
+  function beginPlanning(){state.question=0;state.answers=[];state.qa=[];prompts[0]=`You have about ${fmtTrip(state.remainingMinutes)} to ${state.destinationName}. What matters most during this drive?`;say(prompts[0],listen)}
+  let rec=null,listenTimer=null;
+  const VOICE_HELP={'not-allowed':'Microphone is blocked. Allow mic access for this site (lock icon in the address bar), then tap the mic.','service-not-allowed':'Microphone is blocked. Allow mic access for this site, then tap the mic.','audio-capture':'No microphone found. Check your input device, then tap the mic.','network':'The speech service is unreachable. Voice needs Chrome or Edge with internet. You can type instead.','language-not-supported':'Speech recognition does not support this language here. You can type instead.'};
+  function showTextInput(on){$('typeForm').classList.toggle('show',on);if(on)$('typeInput').focus()}
+  function stopListening(){clearTimeout(listenTimer);if(rec){const r=rec;rec=null;r.onresult=r.onerror=r.onend=null;try{r.abort()}catch{}}}
+  function idleSync(){setVoice('idle');syncActivityAudio().catch(()=>{})}
+  function listen(attempt=0){
+    stopListening();stopLectureNarration();
     const Recognition=window.SpeechRecognition||window.webkitSpeechRecognition;
-    if(!Recognition){setTimeout(()=>handleSpeech(["I have a presentation right after I arrive.","Not very. It isn’t due until Friday.","Something lighter. I’m tired."][state.question]||"Give me more music."),1200);return}
-    const rec=new Recognition();rec.lang='en-US';rec.interimResults=true;rec.continuous=false;let final='';
-    rec.onresult=e=>{final=Array.from(e.results).map(r=>r[0].transcript).join(' ');$('transcript').querySelector('span').textContent=final;$('transcript').classList.add('show')};
-    rec.onerror=()=>{setVoice('idle');$('transcript').classList.remove('show');syncActivityAudio().catch(()=>{})};rec.onend=()=>{if(final)handleSpeech(final);else{setVoice('idle');syncActivityAudio().catch(()=>{})}};rec.start();
+    if(!Recognition){
+      if(new URLSearchParams(location.search).has('demo')){setVoice('listening');setTimeout(()=>handleSpeech(["I have a presentation right after I arrive.","Not very. It isn’t due until Friday.","Something lighter. I’m tired."][state.question]||"Give me more music."),1200);return}
+      idleSync();showTextInput(true);showNotice('Voice input unavailable','This browser has no speech recognition. Use Chrome or Edge, or type your answer.');return}
+    if('speechSynthesis'in window)speechSynthesis.cancel(); // never listen to our own voice
+    setVoice('listening');
+    const r=new Recognition();rec=r;r.lang='en-US';r.interimResults=true;r.continuous=false;let final='',err='';
+    r.onresult=e=>{final=Array.from(e.results).map(x=>x[0].transcript).join(' ');$('transcript').querySelector('span').textContent=final;$('transcript').classList.add('show')};
+    r.onerror=e=>{err=e.error||'unknown';console.warn('[voice] recognition error:',err)};
+    r.onend=()=>{
+      clearTimeout(listenTimer);if(rec!==r)return;rec=null;$('transcript').classList.remove('show');
+      if(final.trim()){handleSpeech(final.trim());return}
+      if(r._manual&&!err){idleSync();return} // user tapped the mic to stop: don't restart
+      if(!err||err==='no-speech'){ // silence: keep listening a couple of times, then hand control back with a hint
+        if(attempt<2){listen(attempt+1);return}
+        idleSync();showTextInput(true);showNotice('I didn’t hear anything','Tap the mic and try again, or type your answer.');return}
+      idleSync();if(err==='aborted')return;
+      showTextInput(true);showNotice('Can’t use the microphone',VOICE_HELP[err]||`Speech recognition failed (${err}). You can type instead.`);
+    };
+    listenTimer=setTimeout(()=>{try{r.stop()}catch{}},15000); // watchdog: never stay stuck on "Listening"
+    try{r.start()}catch(e){console.warn('[voice] start failed',e);rec=null;idleSync();showTextInput(true);showNotice('Microphone unavailable',String(e.message||e))}
   }
   function handleSpeech(text){$('transcript').classList.remove('show');setVoice('processing');
     const lower=text.toLowerCase();
@@ -267,7 +304,7 @@
       replan(text);return;
     }
     if(state.agentState==='interrupting'){say('Your manager says the presentation slides changed. The new version emphasizes the launch timeline. I’ve added that to presentation prep.',()=>{state.agentState='following_plan';if(shouldResumeMusic())media('play');showNotice('Added to presentation prep',shouldResumeMusic()?'Music will resume now.':'Your updated plan is ready.');});return}
-    if(state.question<3){state.answers.push(text);state.question++;if(state.question<3){say(prompts[state.question],listen)}else createPlan();return}
+    if(state.question<3){state.answers.push(text);state.qa.push({question:prompts[state.question],answer:text});state.question++;if(state.question<3){say(prompts[state.question],listen)}else createPlan();return}
     replan(text);
   }
   async function summarizeInbox(availableMinutes=5){
@@ -278,25 +315,31 @@
   }
   async function createPlan(){
     const fallback={spokenResponse:"You have just under two hours. Since your presentation is important and you’re feeling tired, I’ll prioritize presentation prep, keep the lecture short, and add music breaks. Sound good?",plan:plans.initial};
-    const result=await api('/api/plan',{userId:'demo-user',commuteDurationMinutes:state.remainingMinutes,destination:state.destinationName,eta:state.eta.toISOString(),energyLevel:3,priorities:[{activity:'presentation',significance:10,urgency:8},{activity:'lecture',significance:4,urgency:2}],context:{lectureDue:'Friday',presentationAfterArrival:true,routeProvider:state.routeProvider,distanceMeters:state.distanceMeters,traffic:state.traffic,roadSummary:state.roadSummary},utterances:state.answers},fallback);
-    state.commuteId=result.commuteId||state.commuteId;state.plan=(result.plan||fallback.plan).map(normalizeActivity);state.currentIndex=0;state.agentState='waiting_for_confirmation';render();say(result.spokenResponse||fallback.spokenResponse,listen);
+    const result=await api('/api/plan',{userId:'demo-user',commuteDurationMinutes:state.remainingMinutes,destination:state.destinationName,eta:state.eta.toISOString(),priorities:[],context:{routeProvider:state.routeProvider,distanceMeters:state.distanceMeters,traffic:state.traffic,roadSummary:state.roadSummary},utterances:state.qa},fallback);
+    if(result.commuteId&&!result.__offline){state.commuteId=result.commuteId;state.live=true}state.plan=(result.plan||fallback.plan).map(normalizeActivity);state.currentIndex=0;state.agentState='waiting_for_confirmation';render();say(result.spokenResponse||fallback.spokenResponse,listen);
   }
-  function normalizeActivity(x){const type=x.type==='presentation_prep'||x.type==='presentation_practice'?'presentation':x.type==='email_roundup'?'email':x.type==='arrival_summary'?'arrival':x.type;const labels={email:'Email Briefing',presentation:'Presentation Prep',music:'Morning Mix',lecture:'Bird Behavior Lesson',arrival:'Arrival Summary'};const mins=x.minutes||x.duration||10;return{...x,type,title:x.title||x.label||labels[type]||'Commute Activity',meta:x.meta||x.courseTitle||x.presentationTitle||({email:'Priority messages',presentation:'Key points · rehearsal',music:'Your favorites',lecture:'Introduction to Bird Behavior and Neuroscience',arrival:'Your day at a glance'}[type]||''),minutes:mins,remaining:x.remaining||mins}}
+  function normalizeActivity(x){const type=({presentation_prep:'presentation',presentation_practice:'presentation',email_roundup:'email',event_summary:'email',arrival_summary:'arrival'})[x.type]||x.type;const labels={email:'Email Briefing',presentation:'Presentation Prep',music:'Morning Mix',lecture:'Bird Behavior Lesson',arrival:'Arrival Summary'};const mins=x.minutes||x.duration||10;return{...x,type,title:x.title||x.label||labels[type]||'Commute Activity',meta:x.meta||x.courseTitle||x.presentationTitle||({email:'Priority messages',presentation:'Key points · rehearsal',music:'Your favorites',lecture:'Introduction to Bird Behavior and Neuroscience',arrival:'Your day at a glance'}[type]||''),minutes:mins,remaining:x.remaining||mins,raw:x.raw||x.type,reported:0}}
   async function replan(feedback){
-    state.agentState='replanning';document.body.classList.add('replan');showNotice('Updating plan…','Lecture ↓ 12 min  ·  Music ↑ 20 min');
+    state.agentState='replanning';document.body.classList.add('replan');showNotice('Updating plan…','Asking the Coordinator');await reportProgress(state.plan[state.currentIndex]);
     const fallback={spokenResponse:"Got it. I’ll shorten the lecture and add another music block.",interruptCurrentActivity:true,updatedPlan:plans.lighter};
     const result=await api('/api/replan',{userId:'demo-user',commuteId:state.commuteId,remainingMinutes:state.remainingMinutes,currentActivity:state.plan[state.currentIndex]?.type,userFeedback:feedback,newEvents:[]},fallback);
-    setTimeout(()=>{if(result.interruptCurrentActivity)media('pause');state.plan=(result.updatedPlan||result.plan||fallback.updatedPlan).map(normalizeActivity);state.currentIndex=0;state.agentState='following_plan';render();document.body.classList.remove('replan');say(result.spokenResponse||fallback.spokenResponse)},750)
+    setTimeout(()=>{if(result.interruptCurrentActivity)media('pause');state.plan=(result.updatedPlan||result.plan||fallback.updatedPlan).map(normalizeActivity);state.currentIndex=0;state.agentState='following_plan';render();document.body.classList.remove('replan');if(!result.__offline)showNotice('Plan updated',`${result.reason||'Replanned'} · ${result.interpretedVia==='llm'?'AI':'rules'}`);say(result.spokenResponse||fallback.spokenResponse)},750)
   }
   async function triggerUrgentEmail(){
-    if(state.agentState==='interrupting')return;const musicWasPlaying=currentActivity()?.type==='music';stopLectureNarration();state.agentState='interrupting';setVoice('processing');if(musicWasPlaying)media('pause');
+    if(state.agentState==='interrupting')return;const musicWasPlaying=currentActivity()?.type==='music';stopLectureNarration();state.agentState='interrupting';setVoice('processing');if(musicWasPlaying)media('pause');await reportProgress(state.plan[state.currentIndex]);
     const fallback={interruptCurrentActivity:true,spokenResponse:'You just received an important email about your presentation. Would you like the summary?'};
-    const result=await api('/api/event',{commuteId:state.commuteId,type:'email',summary:'Boss says presentation slides changed.',sender:'Manager',timestamp:new Date().toISOString(),urgency:10,significance:9},fallback);
+    const result=await api('/api/event',{commuteId:state.commuteId,type:'email',summary:'Boss says presentation slides changed.',sender:'Manager',timestamp:new Date().toISOString(),urgency:10,significance:9,remainingMinutes:state.remainingMinutes,currentActivity:state.plan[state.currentIndex]?.type},fallback);
+    if(!result.__offline&&result.updatedPlan?.length){state.plan=result.updatedPlan.map(normalizeActivity);state.currentIndex=0;render()}
     if(result.interruptCurrentActivity!==false){media('pause');showNotice('Important email','Presentation slides changed','email');say(result.spokenResponse||fallback.spokenResponse,listen)}else{state.agentState='following_plan';showNotice('Email queued','I’ll include it in your next briefing.');setVoice('idle');if(musicWasPlaying)media('play')}
   }
-  function advanceActivity(){stopLectureNarration();state.currentIndex=(state.currentIndex+1)%state.plan.length;render()}
+  async function advanceActivity(){
+    stopLectureNarration();
+    const a=state.plan[state.currentIndex];
+    if(state.currentIndex>=state.plan.length-1){state.agentState='arrived';if(a)a.remaining=0;render();await reportProgress(a);await completeCommute();showNotice('You’ve arrived',state.live?'Trip saved. I’ll learn from this one.':'Sample trip finished.');return}
+    await reportProgress(a);state.currentIndex++;render()}
   function scheduleEmail(){clearTimeout(scheduleEmail.t);scheduleEmail.t=setTimeout(triggerUrgentEmail,45000)}
-  $('mic').addEventListener('click',()=>{if(state.voiceState==='listening')return;if(!state.answers.length&&state.question===0&&state.agentState==='following_plan')beginPlanning();else listen()});
+  $('typeForm').addEventListener('submit',e=>{e.preventDefault();const t=$('typeInput').value.trim();if(!t)return;$('typeInput').value='';stopListening();handleSpeech(t)});
+  $('mic').addEventListener('click',()=>{if(state.voiceState==='listening'){if(rec)rec._manual=true;try{rec&&rec.stop()}catch{}return}if(state.voiceState==='speaking'&&skipSpeech){skipSpeech();return}if(!state.answers.length&&state.question===0&&state.agentState==='following_plan')beginPlanning();else listen()});
   $('destinationButton').addEventListener('click',()=>{const open=!$('destinationSearch').classList.contains('open');$('destinationSearch').classList.toggle('open',open);$('destinationButton').setAttribute('aria-expanded',String(open));if(open)$('destinationInput').focus()});
   $('destinationInput').addEventListener('input',e=>{clearTimeout(searchTimer);searchTimer=setTimeout(()=>findDestinations(e.target.value),220)});
   $('suggestions').addEventListener('click',e=>{const button=e.target.closest('[data-id]');if(button)chooseDestination(button.dataset.id)});
@@ -306,7 +349,7 @@
   $('changeDestination').addEventListener('click',()=>{state.destinationCoordinate=null;state.destinationName='';state.destinationAddress='';$('startDestinationInput').disabled=false;$('startDestinationInput').value='';setStage('select');setTimeout(()=>$('startDestinationInput').focus(),0)});
   document.addEventListener('click',e=>{if(!e.target.closest('.destination'))closeDestinationSearch()});
   document.addEventListener('keydown',e=>{if(e.target.matches('input'))return;if(e.key.toLowerCase()==='e')triggerUrgentEmail();if(e.key.toLowerCase()==='n')advanceActivity();if(e.key===' ') {$('mic').click();e.preventDefault()}});
-  setInterval(()=>{if(state.stage!=='driving'||state.agentState!=='following_plan')return;const a=state.plan[state.currentIndex];if(!a)return;if(a.remaining>1)a.remaining--;else advanceActivity();if(state.remainingMinutes>1)state.remainingMinutes--;state.eta=new Date(Date.now()+state.remainingMinutes*60000);render()},60000);
+  setInterval(()=>{if(state.stage!=='driving'||state.agentState!=='following_plan')return;const a=state.plan[state.currentIndex];if(!a)return;if(a.remaining>1)a.remaining--;else{a.remaining=0;advanceActivity()}if(state.remainingMinutes>1)state.remainingMinutes--;state.eta=new Date(Date.now()+state.remainingMinutes*60000);render()},60000);
   setInterval(()=>{if(state.stage==='driving')loadRoute(false).catch(()=>{})},300000);
   if(document.modelContext?.registerTool){
     const register=(tool)=>Promise.resolve(document.modelContext.registerTool(tool)).catch(()=>{});

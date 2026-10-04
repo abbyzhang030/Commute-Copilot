@@ -106,7 +106,15 @@ async function attachAgentContent(plan: PlanItem[], userId: string): Promise<Pla
   return enriched;
 }
 
-function applyInterpretation(i: Interpretation, st: { temp: TempState; priorities: Record<string, Priority>; energy: number }) {
+const KNOWN_ACTIVITIES = new Set(["presentation", "lecture", "meeting_prep", "music", "email"]);
+/** Keep a model-proposed activity only if it is a known one or the driver actually said it (guards against the model echoing prompt wording as an activity). */
+function plausibleActivity(activity: string, said: string): boolean {
+  if (KNOWN_ACTIVITIES.has(normalizeActivity(activity))) return true;
+  const words = activity.toLowerCase().split(/[^a-z0-9]+/).filter((w) => w.length > 3);
+  return words.some((w) => said.toLowerCase().includes(w));
+}
+
+function applyInterpretation(i: Interpretation, st: { temp: TempState; priorities: Record<string, Priority>; energy: number }, said = "") {
   const t = st.temp;
   t.musicBias = clamp(t.musicBias + i.musicDelta, -0.4, 0.5);
   t.lectureFactor = clamp(t.lectureFactor * i.lectureFactor, 0, 1.5);
@@ -115,6 +123,7 @@ function applyInterpretation(i: Interpretation, st: { temp: TempState; prioritie
   for (const d of i.drop) { const k = normalizeActivity(d); if (!t.dropped.includes(k)) t.dropped.push(k); }
   if (i.energyLevel) st.energy = i.energyLevel;
   for (const u of i.priorityUpdates) {
+    if (!plausibleActivity(u.activity, said)) { console.warn(`[coordinator] ignoring unrecognised activity from model: ${u.activity}`); continue; }
     const k = normalizeActivity(u.activity);
     const cur = st.priorities[k] ?? { significance: 5, urgency: 2 };
     st.priorities[k] = { significance: u.significance ?? cur.significance, urgency: u.urgency ?? cur.urgency };
@@ -151,10 +160,15 @@ export async function createPlan(req: import("zod").infer<typeof import("./types
 
   const st = { temp: emptyTemp(), priorities, energy: parseEnergy(req.energyLevel) ?? 3 };
   const heard: string[] = [];
-  for (const u of req.utterances) {
-    const { result } = await interpretUtterance(u, { stage: "pre-commute", durationMin: req.commuteDurationMinutes });
-    applyInterpretation(result, st); heard.push(result.summary);
-  }
+  const engines: string[] = [];
+  // Interpret all answers concurrently (one LLM round-trip of latency, not three), then apply them in order.
+  const results = await Promise.all(req.utterances.map((u) => {
+    const answer = typeof u === "string" ? u : u.answer;
+    const question = typeof u === "string" ? undefined : u.question;
+    // The LLM sees the question too ("Not very." only makes sense next to what was asked); keyword fallback sees the answer.
+    return interpretUtterance(answer, { stage: "pre-commute", durationMin: req.commuteDurationMinutes, question }, answer);
+  }));
+  for (const [n, r] of results.entries()) { const u = req.utterances[n]; applyInterpretation(r.result, st, typeof u === "string" ? u : u.answer); heard.push(r.result.summary); engines.push(r.engine); }
 
   const ckey = contextKey({ period: periodOfDay(now), energy: st.energy, durationMin: req.commuteDurationMinutes, lectureDays });
   const learned = await learnedMusicDelta(req.userId, ckey, baseline.musicShare);
@@ -176,6 +190,8 @@ export async function createPlan(req: import("zod").infer<typeof import("./types
   return {
     commuteId, spokenResponse: spoken,
     reason: heard.length ? `Heard: ${heard.join("; ")}.` : "Initial plan from stated priorities, energy and preferences.",
+    interpretedVia: engines.length ? (engines.every((e) => e === "keywords") ? "keywords" : "llm") : "none",
+    interpretedEngines: engines,
     interruptCurrentActivity: false,
     currentAction: plan[0] ? { type: plan[0].type, durationMinutes: plan[0].minutes } : null,
     plan, updatedPlan: plan, totalMinutes: req.commuteDurationMinutes,
@@ -193,7 +209,7 @@ function initialSpeech(total: number, plan: PlanItem[], pri: Record<string, Prio
   const bits = [
     top ? `prioritize ${prettyName(top[0] === "presentation" ? "presentation_prep" : top[0])}` : "build a balanced mix",
     lec === 0 ? "skip the lecture" : lec <= 20 && top ? "keep the lecture short" : "fit in your lecture",
-    breaks ? `give you ${breaks === 1 ? "a music break" : `${breaks === 2 ? "two" : breaks} music breaks`}` : "",
+    breaks ? `give you ${breaks === 1 ? "a music break" : `${({ 2: "two", 3: "three", 4: "four" } as Record<number, string>)[breaks] ?? breaks} music breaks`}` : "",
   ].filter(Boolean);
   const list = bits.length > 1 ? `${bits.slice(0, -1).join(", ")}, and ${bits[bits.length - 1]}` : bits[0];
   return `You have ${durationPhrase(total)}. ${why ? `Since ${why}, ` : ""}I'll ${list}. Does that sound good?`;
@@ -232,12 +248,13 @@ export async function replan(a: ReplanArgs) {
   // 1. interpret explicit feedback (temporary by default)
   let interp: Interpretation = noChange();
   let via = "none";
+  let engine = "none";
   const fb = a.userFeedback?.trim();
   const continueCourseRequested = !!fb && /\b(continue|resume|start|play)\b.*\b(bird|lecture|course|lesson)\b/i.test(fb);
   if (fb) {
     const r = await interpretUtterance(fb, { remainingMinutes: remaining, currentActivity: current, energy: st.energy, priorities: st.priorities, temp: st.temp });
-    interp = r.result; via = r.via;
-    applyInterpretation(interp, st);
+    interp = r.result; via = r.via; engine = r.engine;
+    applyInterpretation(interp, st, fb);
     if (continueCourseRequested) {
       const lecturePriority = st.priorities.lecture ?? { significance: 5, urgency: 2 };
       st.priorities.lecture = { significance: Math.max(9, lecturePriority.significance), urgency: Math.max(6, lecturePriority.urgency) };
@@ -270,9 +287,12 @@ export async function replan(a: ReplanArgs) {
 
   // 3. decide how to start the remaining plan
   const currentPri = current ? st.priorities[normalizeActivity(current)] : undefined;
-  const softensCurrent = !!current && (interp.lectureFactor < 1 || interp.loadChange === "lower" || interp.drop.length > 0)
-    && (currentPri?.significance ?? 5) < 8 && normalizeActivity(current) !== "music";
-  const startWith = urgentEvent ? "event" : continueCourseRequested ? "lecture" : softensCurrent && (interp.musicDelta > 0 || interp.loadChange === "lower") ? "music" : "current";
+  const cur = current ? normalizeActivity(current) : null;
+  // An explicit complaint about the activity that is playing wins over its protected status.
+  const directlyDeprioritised = !!cur && ((cur === "lecture" && interp.lectureFactor < 1) || interp.drop.some((d) => normalizeActivity(d) === cur));
+  const softensCurrent = directlyDeprioritised
+    || (!!current && interp.loadChange === "lower" && (currentPri?.significance ?? 5) < 8 && cur !== "music");
+  const startWith = urgentEvent ? "event" : continueCourseRequested ? "lecture" : softensCurrent && (directlyDeprioritised || interp.musicDelta > 0 || interp.loadChange === "lower") ? "music" : "current";
 
   const ckey: string = c.context_key;
   const doneRows = await db.query<{ type: string; actual_minutes: number }>("SELECT type,actual_minutes FROM activities WHERE commute_id=$1 AND status='done'", [c.id]);
@@ -310,7 +330,7 @@ export async function replan(a: ReplanArgs) {
     interruptCurrentActivity: interrupt,
     currentAction: first ? { type: first.type, durationMinutes: first.minutes } : null,
     updatedPlan: plan, plan, remainingMinutes: remaining,
-    temporaryState: st.temp, interpretedVia: via,
+    temporaryState: st.temp, interpretedVia: via, interpretedEngine: engine, interpretation: fb ? interp : null,
     urgentEvent: urgentEvent ? { ...urgentEvent, askForSummary: true } : null,
   };
 }
@@ -321,8 +341,10 @@ function replanSpeech(hasFeedback: boolean, prev: PlanItem[], next: PlanItem[], 
   const parts: string[] = [];
   if (lec1 === 0 && lec0 > 0) parts.push("wrap up the lecture");
   else if (frac(next, "lecture") < frac(prev, "lecture") - 0.02) parts.push("shorten the lecture");
-  else if (frac(next, "lecture") > frac(prev, "lecture") + 0.02) parts.push("make room for more lecture");
+  else if (i.lectureFactor < 1 && lec1 > 0) parts.push("keep the lecture short");
+  else if (frac(next, "lecture") > frac(prev, "lecture") + 0.02 && i.lectureFactor >= 1) parts.push("make room for more lecture");
   if (frac(next, "music") > frac(prev, "music") + 0.02) parts.push("give you more music");
+  else if (i.musicDelta > 0) parts.push("fit in as much music as I can");
   else if (frac(next, "music") < frac(prev, "music") - 0.02) parts.push("trim the music");
   const top = Object.entries(pri).filter(([k, p]) => k !== "music" && p.significance >= 8 && next.some((b) => sameActivity(b.type, k)))
     .sort((a, b) => b[1].significance - a[1].significance)[0];
