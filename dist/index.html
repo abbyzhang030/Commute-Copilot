@@ -25,6 +25,7 @@
     .up-next{min-width:0;border-left:1px solid var(--line);padding-left:clamp(22px,4vw,44px)}.itinerary{display:grid;gap:10px}.up-item{display:grid;grid-template-columns:32px 1fr auto;gap:10px;align-items:center;min-width:0;transition:opacity .25s,transform .35s}.up-icon{width:32px;height:32px;border-radius:10px;background:rgba(255,255,255,.08);color:#d8e4dd}.up-copy{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:.91rem;font-weight:700}.up-min{color:#9caaa3;font-size:.8rem;font-weight:700;white-space:nowrap}
     .voice{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;min-width:122px}.mic{width:88px;height:88px;border:0;border-radius:50%;display:grid;place-items:center;cursor:pointer;color:#06110c;background:linear-gradient(145deg,#dfffee,#75f7b0);box-shadow:0 10px 34px rgba(64,255,150,.23),inset 0 1px 0 #fff;transition:transform .18s,box-shadow .2s}.mic:hover{transform:scale(1.025)}.mic:active{transform:scale(.96)}.mic:focus-visible{outline:3px solid white;outline-offset:4px}.mic svg{width:33px;height:33px}.voice-label{font-size:.86rem;font-weight:750;margin-top:11px}.voice-hint{font-size:.68rem;color:#87958e;margin-top:3px}.voice.listening .mic{animation:pulse 1.35s infinite;background:linear-gradient(145deg,#fff,#8fffc1)}.voice.speaking .mic{box-shadow:0 0 0 8px rgba(143,255,193,.12),0 0 0 16px rgba(143,255,193,.05)}
     @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(143,255,193,.35),0 10px 34px rgba(64,255,150,.26)}50%{box-shadow:0 0 0 18px rgba(143,255,193,0),0 10px 40px rgba(64,255,150,.4)}}
+    .type-form{display:none;margin-top:8px;gap:4px;width:100%}.type-form.show{display:flex}.type-form input{min-width:0;flex:1;width:96px;border:1px solid rgba(255,255,255,.3);border-radius:10px;padding:6px 8px;font-size:.75rem;background:rgba(255,255,255,.92);color:#0a1712}.type-form button{border:0;border-radius:10px;padding:6px 9px;font-size:.75rem;font-weight:700;background:#75f7b0;color:#06110c;cursor:pointer}
     .offline-badge{position:fixed;z-index:20;top:12px;left:50%;transform:translateX(-50%);display:none;background:#ffcd65;color:#211707;border-radius:999px;padding:6px 14px;font-size:.75rem;font-weight:760;box-shadow:0 6px 20px rgba(0,0,0,.25)}.offline-badge.show{display:block}
     .notice{position:absolute;z-index:10;left:50%;top:19%;transform:translate(-50%,-10px);opacity:0;pointer-events:none;background:rgba(8,15,14,.92);color:white;border:1px solid rgba(255,255,255,.14);border-radius:18px;padding:14px 17px;box-shadow:0 16px 45px rgba(0,0,0,.32);backdrop-filter:blur(20px);min-width:min(390px,calc(100vw - 32px));display:flex;align-items:center;gap:13px;transition:opacity .25s,transform .25s}.notice.show{opacity:1;transform:translate(-50%,0)}.notice-icon{display:grid;place-items:center;width:38px;height:38px;border-radius:12px;background:#ffcd65;color:#211707}.notice strong{display:block;font-size:.9rem}.notice span{display:block;margin-top:3px;color:#aebbb4;font-size:.78rem}.notice.email .notice-icon{background:#ffcf68}
     .transcript{position:absolute;z-index:5;left:50%;bottom:calc(clamp(10px,2.5vw,34px) + 280px);transform:translateX(-50%);width:min(620px,calc(100vw - 32px));text-align:center;color:white;font-size:clamp(1rem,2.2vw,1.25rem);font-weight:650;line-height:1.35;text-shadow:0 2px 10px rgba(0,0,0,.65);opacity:0;transition:opacity .2s}.transcript.show{opacity:1}.transcript span{display:inline-block;background:rgba(7,15,13,.74);padding:10px 15px;border-radius:14px;backdrop-filter:blur(12px)}
@@ -85,7 +86,7 @@
       <div class="progress" role="progressbar" aria-label="Current activity progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="40"><span id="progressBar"></span></div>
     </div>
     <div class="up-next"><p class="section-label">Up next</p><div class="itinerary" id="itinerary"></div></div>
-    <div class="voice" id="voice"><button class="mic" id="mic" aria-label="Talk to Commute Copilot" aria-pressed="false"></button><div class="voice-label" id="voiceLabel">Agent ready</div><div class="voice-hint">Tap to speak</div></div>
+    <div class="voice" id="voice"><button class="mic" id="mic" aria-label="Talk to Commute Copilot" aria-pressed="false"></button><div class="voice-label" id="voiceLabel">Agent ready</div><div class="voice-hint">Tap to speak</div><form class="type-form" id="typeForm"><input id="typeInput" type="text" placeholder="Or type…" aria-label="Type your answer" autocomplete="off"><button type="submit">Send</button></form></div>
   </section>
 </main>
 <script>
@@ -181,10 +182,14 @@
   }
   function setVoice(mode,label){state.voiceState=mode; $('voice').className=`voice ${mode}`; $('voiceLabel').textContent=label||({idle:'Agent ready',listening:'Listening…',processing:'Thinking…',speaking:'Agent speaking…'}[mode]); $('mic').setAttribute('aria-pressed',mode==='listening')}
   function showNotice(title,body,kind=''){ $('noticeTitle').textContent=title;$('noticeBody').textContent=body;$('notice').className=`notice ${kind} show`;clearTimeout(showNotice.t);showNotice.t=setTimeout(()=>$('notice').classList.remove('show'),4200)}
+  let skipSpeech=null;
   function say(text,after){
     setVoice('speaking');$('transcript').querySelector('span').textContent=text;$('transcript').classList.add('show');
-    if('speechSynthesis'in window){speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);u.rate=1.02;u.pitch=.97;u.onend=done;speechSynthesis.speak(u);setTimeout(done,Math.max(3500,text.length*55))}else setTimeout(done,Math.max(2200,text.length*45));
-    let ran=false;function done(){if(ran)return;ran=true;$('transcript').classList.remove('show');setVoice('idle');after?.()}
+    let ran=false,natural=false,guard=null;
+    function done(){if(ran)return;ran=true;clearTimeout(guard);skipSpeech=null;if(!natural&&'speechSynthesis'in window)speechSynthesis.cancel();$('transcript').classList.remove('show');setVoice('idle');after?.()}
+    skipSpeech=done;
+    if('speechSynthesis'in window){speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);u.rate=1.02;u.pitch=.97;u.onend=()=>{natural=true;done()};u.onerror=()=>done();speechSynthesis.speak(u);guard=setTimeout(done,Math.max(5000,text.length*95+2500))}
+    else guard=setTimeout(done,Math.max(2200,text.length*45));
   }
   function setOffline(on,why){state.offline=on;$('offlineBadge').classList.toggle('show',on);if(on)$('offlineBadge').textContent=`Offline fallback · ${why||'backend unavailable'} · showing sample data`}
   // Backend calls can include a database round-trip plus an LLM call, so allow 20s. Any failure is logged and shown via the badge.
@@ -205,13 +210,33 @@
   function media(action){fetch(`/api/media/${action}`,{method:'POST'}).catch(()=>{})}
   const prompts=["","How important is your ornithology lecture today?","Do you want a productive drive or something lighter?"];
   function beginPlanning(){state.question=0;state.answers=[];state.qa=[];prompts[0]=`You have about ${fmtTrip(state.remainingMinutes)} to ${state.destinationName}. What matters most during this drive?`;say(prompts[0],listen)}
-  function listen(){
-    setVoice('listening');
+  let rec=null,listenTimer=null;
+  const VOICE_HELP={'not-allowed':'Microphone is blocked. Allow mic access for this site (lock icon in the address bar), then tap the mic.','service-not-allowed':'Microphone is blocked. Allow mic access for this site, then tap the mic.','audio-capture':'No microphone found. Check your input device, then tap the mic.','network':'The speech service is unreachable. Voice needs Chrome or Edge with internet. You can type instead.','language-not-supported':'Speech recognition does not support this language here. You can type instead.'};
+  function showTextInput(on){$('typeForm').classList.toggle('show',on);if(on)$('typeInput').focus()}
+  function stopListening(){clearTimeout(listenTimer);if(rec){const r=rec;rec=null;r.onresult=r.onerror=r.onend=null;try{r.abort()}catch{}}}
+  function listen(attempt=0){
+    stopListening();
     const Recognition=window.SpeechRecognition||window.webkitSpeechRecognition;
-    if(!Recognition){setTimeout(()=>handleSpeech(["I have a presentation right after I arrive.","Not very. It isn’t due until Friday.","Something lighter. I’m tired."][state.question]||"Give me more music."),1200);return}
-    const rec=new Recognition();rec.lang='en-US';rec.interimResults=true;rec.continuous=false;let final='';
-    rec.onresult=e=>{final=Array.from(e.results).map(r=>r[0].transcript).join(' ');$('transcript').querySelector('span').textContent=final;$('transcript').classList.add('show')};
-    rec.onerror=()=>{setVoice('idle');$('transcript').classList.remove('show')};rec.onend=()=>{if(final)handleSpeech(final);else setVoice('idle')};rec.start();
+    if(!Recognition){
+      if(new URLSearchParams(location.search).has('demo')){setVoice('listening');setTimeout(()=>handleSpeech(["I have a presentation right after I arrive.","Not very. It isn’t due until Friday.","Something lighter. I’m tired."][state.question]||"Give me more music."),1200);return}
+      setVoice('idle');showTextInput(true);showNotice('Voice input unavailable','This browser has no speech recognition. Use Chrome or Edge, or type your answer.');return}
+    if('speechSynthesis'in window)speechSynthesis.cancel(); // never listen to our own voice
+    setVoice('listening');
+    const r=new Recognition();rec=r;r.lang='en-US';r.interimResults=true;r.continuous=false;let final='',err='';
+    r.onresult=e=>{final=Array.from(e.results).map(x=>x[0].transcript).join(' ');$('transcript').querySelector('span').textContent=final;$('transcript').classList.add('show')};
+    r.onerror=e=>{err=e.error||'unknown';console.warn('[voice] recognition error:',err)};
+    r.onend=()=>{
+      clearTimeout(listenTimer);if(rec!==r)return;rec=null;$('transcript').classList.remove('show');
+      if(final.trim()){handleSpeech(final.trim());return}
+      if(r._manual&&!err){setVoice('idle');return} // user tapped the mic to stop: don't restart
+      if(!err||err==='no-speech'){ // silence: keep listening a couple of times, then hand control back with a hint
+        if(attempt<2){listen(attempt+1);return}
+        setVoice('idle');showTextInput(true);showNotice('I didn’t hear anything','Tap the mic and try again, or type your answer.');return}
+      setVoice('idle');if(err==='aborted')return;
+      showTextInput(true);showNotice('Can’t use the microphone',VOICE_HELP[err]||`Speech recognition failed (${err}). You can type instead.`);
+    };
+    listenTimer=setTimeout(()=>{try{r.stop()}catch{}},15000); // watchdog: never stay stuck on "Listening"
+    try{r.start()}catch(e){console.warn('[voice] start failed',e);rec=null;setVoice('idle');showTextInput(true);showNotice('Microphone unavailable',String(e.message||e))}
   }
   function handleSpeech(text){$('transcript').classList.remove('show');setVoice('processing');
     const lower=text.toLowerCase();
@@ -249,7 +274,8 @@
     if(state.currentIndex>=state.plan.length-1){state.agentState='arrived';if(a)a.remaining=0;render();await reportProgress(a);await completeCommute();showNotice('You’ve arrived',state.live?'Trip saved. I’ll learn from this one.':'Sample trip finished.');return}
     await reportProgress(a);state.currentIndex++;render()}
   function scheduleEmail(){clearTimeout(scheduleEmail.t);scheduleEmail.t=setTimeout(triggerUrgentEmail,45000)}
-  $('mic').addEventListener('click',()=>{if(state.voiceState==='listening')return;if(!state.answers.length&&state.question===0&&state.agentState==='following_plan')beginPlanning();else listen()});
+  $('typeForm').addEventListener('submit',e=>{e.preventDefault();const t=$('typeInput').value.trim();if(!t)return;$('typeInput').value='';stopListening();handleSpeech(t)});
+  $('mic').addEventListener('click',()=>{if(state.voiceState==='listening'){if(rec)rec._manual=true;try{rec&&rec.stop()}catch{}return}if(state.voiceState==='speaking'&&skipSpeech){skipSpeech();return}if(!state.answers.length&&state.question===0&&state.agentState==='following_plan')beginPlanning();else listen()});
   $('destinationButton').addEventListener('click',()=>{const open=!$('destinationSearch').classList.contains('open');$('destinationSearch').classList.toggle('open',open);$('destinationButton').setAttribute('aria-expanded',String(open));if(open)$('destinationInput').focus()});
   $('destinationInput').addEventListener('input',e=>{clearTimeout(searchTimer);searchTimer=setTimeout(()=>findDestinations(e.target.value),220)});
   $('suggestions').addEventListener('click',e=>{const button=e.target.closest('[data-id]');if(button)chooseDestination(button.dataset.id)});
