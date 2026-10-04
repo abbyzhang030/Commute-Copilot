@@ -4,6 +4,9 @@ import { buildPlan, type BaselinePrefs } from "./planner.js";
 import { contextKey, learnedMusicDelta, observe } from "./learning.js";
 import { interpretUtterance } from "./mastra/agent.js";
 import { getLectureContext } from "./integrations/providers.js";
+import { completeLecture, selectLecture } from "./integrations/learning-agent.js";
+import { getPresentationPrep } from "./integrations/presentation-agent.js";
+import { getInboxBriefing } from "./integrations/email-agent.js";
 import { noChange, emptyTemp, type EventIn, type Interpretation, type PlanItem, type Priority, type TempState } from "./types.js";
 import { clamp, daysUntil, durationPhrase, normalizeActivity, periodOfDay, sameActivity } from "./util.js";
 
@@ -61,6 +64,48 @@ function parseEnergy(e: unknown): number | null {
 const sumMinutes = (plan: PlanItem[], pred: (p: PlanItem) => boolean) => plan.filter(pred).reduce((s, p) => s + p.minutes, 0);
 const prettyName = (type: string) => ({ presentation_prep: "presentation prep", lecture: "lecture", meeting_prep: "meeting prep" } as Record<string, string>)[type] ?? type.replace(/_/g, " ");
 
+async function attachAgentContent(plan: PlanItem[], userId: string): Promise<PlanItem[]> {
+  const enriched = plan.map((item) => ({ ...item }));
+  const used: string[] = [];
+  for (let index = 0; index < enriched.length; index++) {
+    const item = enriched[index];
+    if (item.type !== "lecture") continue;
+    const lesson = await selectLecture(userId, item.minutes, used);
+    if (!lesson) continue;
+    used.push(lesson.id);
+    const unusedMinutes = Math.max(0, item.minutes - lesson.estimatedDurationMinutes);
+    Object.assign(item, {
+      minutes: lesson.estimatedDurationMinutes,
+      label: lesson.title,
+      lessonId: lesson.id,
+      courseTitle: "Introduction to Bird Behavior and Neuroscience",
+      topic: lesson.topic,
+      difficulty: lesson.difficulty,
+      shortDescription: lesson.shortDescription,
+      fullLectureScript: lesson.fullLectureScript,
+    });
+    if (unusedMinutes > 0) {
+      const music = enriched.slice(index + 1).find((candidate) => candidate.type === "music")
+        ?? enriched.slice(0, index).reverse().find((candidate) => candidate.type === "music");
+      if (music) music.minutes += unusedMinutes;
+      else enriched.splice(index + 1, 0, { type: "music", minutes: unusedMinutes, significance: 7, urgency: 2, label: "Music" });
+    }
+  }
+  const presentation = await getPresentationPrep(userId);
+  const presentationItem = enriched.find((item) => item.type === "presentation_prep" || item.type === "presentation_practice");
+  if (presentation && presentationItem) Object.assign(presentationItem, {
+    presentationId: presentation.id,
+    presentationTitle: presentation.title,
+    fullPresentationPrepScript: presentation.fullPrepScript,
+  });
+  for (const emailItem of enriched.filter((item) => item.type === "email_roundup")) {
+    const briefing = await getInboxBriefing(userId, emailItem.minutes);
+    emailItem.emailIds = briefing.emails.map((email) => email.id);
+    emailItem.emailSummaryScript = briefing.spokenSummary;
+  }
+  return enriched;
+}
+
 function applyInterpretation(i: Interpretation, st: { temp: TempState; priorities: Record<string, Priority>; energy: number }) {
   const t = st.temp;
   t.musicBias = clamp(t.musicBias + i.musicDelta, -0.4, 0.5);
@@ -113,11 +158,11 @@ export async function createPlan(req: import("zod").infer<typeof import("./types
 
   const ckey = contextKey({ period: periodOfDay(now), energy: st.energy, durationMin: req.commuteDurationMinutes, lectureDays });
   const learned = await learnedMusicDelta(req.userId, ckey, baseline.musicShare);
-  const plan = buildPlan({
+  const plan = await attachAgentContent(buildPlan({
     remainingMinutes: req.commuteDurationMinutes, priorities: st.priorities, energyLevel: st.energy, prefs: baseline,
     learnedMusicDelta: learned, temp: st.temp, startWith: "auto", includeEmailRoundup: true,
-    labels: { lecture: lecture.course.includes("Ornithology") ? "Ornithology lecture" : "Lecture", email_roundup: "Email roundup" },
-  });
+    labels: { lecture: "Bird behavior lesson", email_roundup: "Email roundup" },
+  }), req.userId);
 
   const commuteId = randomUUID();
   await db.query(
@@ -188,10 +233,17 @@ export async function replan(a: ReplanArgs) {
   let interp: Interpretation = noChange();
   let via = "none";
   const fb = a.userFeedback?.trim();
+  const continueCourseRequested = !!fb && /\b(continue|resume|start|play)\b.*\b(bird|lecture|course|lesson)\b/i.test(fb);
   if (fb) {
     const r = await interpretUtterance(fb, { remainingMinutes: remaining, currentActivity: current, energy: st.energy, priorities: st.priorities, temp: st.temp });
     interp = r.result; via = r.via;
     applyInterpretation(interp, st);
+    if (continueCourseRequested) {
+      const lecturePriority = st.priorities.lecture ?? { significance: 5, urgency: 2 };
+      st.priorities.lecture = { significance: Math.max(9, lecturePriority.significance), urgency: Math.max(6, lecturePriority.urgency) };
+      st.temp.lectureFactor = Math.max(1.3, st.temp.lectureFactor);
+      st.temp.dropped = st.temp.dropped.filter((activity) => normalizeActivity(activity) !== "lecture");
+    }
     await db.query(
       "INSERT INTO feedback_events (id,commute_id,raw_feedback,interpreted_change_json,activity_type,temporary_or_long_term) VALUES ($1,$2,$3,$4::jsonb,$5,$6)",
       [randomUUID(), c.id, fb, JSON.stringify(interp), current, interp.scope === "long_term" ? "long_term" : "temporary"]);
@@ -220,18 +272,18 @@ export async function replan(a: ReplanArgs) {
   const currentPri = current ? st.priorities[normalizeActivity(current)] : undefined;
   const softensCurrent = !!current && (interp.lectureFactor < 1 || interp.loadChange === "lower" || interp.drop.length > 0)
     && (currentPri?.significance ?? 5) < 8 && normalizeActivity(current) !== "music";
-  const startWith = urgentEvent ? "event" : softensCurrent && (interp.musicDelta > 0 || interp.loadChange === "lower") ? "music" : "current";
+  const startWith = urgentEvent ? "event" : continueCourseRequested ? "lecture" : softensCurrent && (interp.musicDelta > 0 || interp.loadChange === "lower") ? "music" : "current";
 
   const ckey: string = c.context_key;
   const doneRows = await db.query<{ type: string; actual_minutes: number }>("SELECT type,actual_minutes FROM activities WHERE commute_id=$1 AND status='done'", [c.id]);
   const completed: Record<string, number> = {};
   for (const d of doneRows) { const k = normalizeActivity(d.type); completed[k] = (completed[k] ?? 0) + d.actual_minutes; }
-  const plan = buildPlan({
+  const plan = await attachAgentContent(buildPlan({
     remainingMinutes: remaining, priorities: st.priorities, energyLevel: st.energy, prefs: baseline,
     learnedMusicDelta: await learnedMusicDelta(c.user_id, ckey, baseline.musicShare),
     temp: st.temp, completed, currentActivity: current, startWith, includeEmailRoundup: false, urgentEvent,
-    labels: { lecture: "Ornithology lecture" },
-  });
+    labels: { lecture: "Bird behavior lesson" },
+  }), c.user_id);
   const first = plan[0] ?? null;
   const interrupt = !!first && !!current && !sameActivity(first.type, current) && (startWith !== "current");
 
@@ -326,7 +378,13 @@ export async function saveActivityResult(commuteId: string, type: string, actual
   else await db.query(
     "INSERT INTO activities (id,commute_id,type,planned_minutes,actual_minutes,status,order_index) VALUES ($1,$2,$3,0,$4,'done',(SELECT COALESCE(MAX(order_index),0)+1 FROM activities WHERE commute_id=$5))",
     [randomUUID(), commuteId, type, actualMinutes, commuteId]);
-  return { ok: true };
+  let learningProgress;
+  if (normalizeActivity(type) === "lecture") {
+    const [commute] = await db.query<any>("SELECT user_id,current_plan_json FROM commutes WHERE id=$1", [commuteId]);
+    const lesson = (commute?.current_plan_json as PlanItem[] | undefined)?.find((item) => item.type === "lecture" && item.lessonId);
+    if (lesson?.lessonId && actualMinutes >= Math.max(1, lesson.minutes * 0.75)) learningProgress = await completeLecture(commute.user_id, lesson.lessonId);
+  }
+  return { ok: true, learningProgress };
 }
 
 export async function completeCommute(commuteId: string) {

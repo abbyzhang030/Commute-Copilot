@@ -14,7 +14,8 @@ export function interpretKeywords(text: string): Interpretation {
   const lowLoad = /(not|n'?t) (to )?(want to )?think|too much (thinking|work|effort)|lighter|something light|relax|zone out|brain.?dead|mentally (drained|tired)/.test(t);
   const tired = /\b(tired|exhausted|sleepy|drained|low energy|wiped)\b/.test(t);
   const awake = /\b(energi[sz]ed|wide awake|full of energy|feeling (great|sharp)|ready to focus)\b/.test(t);
-  const productive = /\b(productive|more work|let'?s focus|more lecture|catch up on (the )?lecture)\b/.test(t);
+  const continueLearning = /\b(continue|resume|start|play)\b.*\b(bird|lecture|course|lesson)\b/.test(t);
+  const productive = /\b(productive|more work|let'?s focus|more lecture|catch up on (the )?lecture)\b/.test(t) || continueLearning;
 
   if (moreMusic) { r.musicDelta += 0.2; notes.push("more music"); }
   if (lectureNo) { r.lectureFactor = 0; r.drop.push("lecture"); notes.push("drop lecture"); }
@@ -29,7 +30,11 @@ export function interpretKeywords(text: string): Interpretation {
     notes.push("presentation is critical");
   }
   const lecDue = t.match(/(not due until|due (on )?(next )?(monday|tuesday|wednesday|thursday|friday|saturday|sunday)|due (next week|in \d+ days))/);
-  if (/lecture|class|course/.test(t) && (lecDue || /not (very )?(important|urgent)|no rush|whenever/.test(t))) {
+  if (continueLearning) {
+    r.priorityUpdates.push({ activity: "lecture", significance: 9, urgency: 6 });
+    r.lectureFactor = Math.max(r.lectureFactor, 1.3);
+    notes.push("continue bird course");
+  } else if (/lecture|class|course/.test(t) && (lecDue || /not (very )?(important|urgent)|no rush|whenever/.test(t))) {
     r.priorityUpdates.push({ activity: "lecture", significance: 4, urgency: 2 });
     notes.push("lecture is low priority");
   } else if (/lecture|class|course/.test(t) && /due (today|tomorrow|tonight)|exam|quiz/.test(t)) {

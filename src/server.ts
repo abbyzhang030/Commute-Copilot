@@ -12,6 +12,10 @@ import { llmEnabled } from "./mastra/agent.js";
 import { configuredModelProvider } from "./mastra/agent.js";
 import { createRealtimeClientSecret, getImportantEmails, integrationStatus, spotifyPlayback } from "./integrations/providers.js";
 import { getMapService, mapboxPublicToken, mockMapService, withMapFallback, type Coordinate } from "./integrations/map-service.js";
+import { getCourseCatalog, getLearnerProgress, selectLecture } from "./integrations/learning-agent.js";
+import { getPresentationPrep } from "./integrations/presentation-agent.js";
+import { listCourses } from "./content-repository.js";
+import { getInboxBriefing, readEmail } from "./integrations/email-agent.js";
 
 export const app = new Hono();
 app.use("*", cors());
@@ -40,10 +44,30 @@ app.get("/api/users/:id/preferences", async (c) => {
   return c.json({ preferences: await db.query("SELECT key,value,confidence,source,updated_at FROM preferences WHERE user_id=$1 ORDER BY key", [c.req.param("id")]) });
 });
 app.get("/api/integrations/status", (c) => c.json({ integrations: integrationStatus(), modelProvider: configuredModelProvider() }));
+app.get("/api/learning/courses", async (c) => c.json({ courses: await listCourses() }));
+app.get("/api/learning/course", async (c) => c.json(await getCourseCatalog()));
+app.get("/api/learning/progress/:userId", async (c) => c.json(await getLearnerProgress(c.req.param("userId"))));
+app.get("/api/learning/lesson", async (c) => {
+  const userId = z.string().min(1).default("demo-user").parse(c.req.query("userId"));
+  const availableMinutes = z.coerce.number().int().min(1).max(120).parse(c.req.query("availableMinutes"));
+  return c.json({ lesson: await selectLecture(userId, availableMinutes) });
+});
+app.get("/api/presentation/upcoming/:userId", async (c) => c.json({ presentation: await getPresentationPrep(c.req.param("userId")) }));
 app.get("/api/email/important", async (c) => c.json({ emails: await getImportantEmails(c.req.query("userId") ?? "demo-user") }));
+app.get("/api/email/summary", async (c) => {
+  const userId = c.req.query("userId") ?? "demo-user";
+  const availableMinutes = z.coerce.number().int().min(1).max(30).default(5).parse(c.req.query("availableMinutes"));
+  return c.json(await getInboxBriefing(userId, availableMinutes));
+});
+app.get("/api/email/message/:id", async (c) => c.json({ result: await readEmail(c.req.query("userId") ?? "demo-user", c.req.param("id")) }));
 app.post("/api/media/:action", async (c) => {
   const action = z.enum(["play", "pause"]).parse(c.req.param("action"));
   return c.json(await spotifyPlayback(action));
+});
+app.get("/api/music/config", (c) => {
+  const playlistId = process.env.YOUTUBE_PLAYLIST_ID?.trim();
+  c.header("Cache-Control", "no-store");
+  return c.json({ provider: playlistId ? "youtube" : "mock", playlistId: playlistId || null });
 });
 const coordinate = z.tuple([z.coerce.number().min(-180).max(180), z.coerce.number().min(-90).max(90)]);
 const coordinateQuery = (value: string | undefined, fallback: Coordinate): Coordinate => {

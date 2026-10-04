@@ -28,6 +28,7 @@
     .notice{position:absolute;z-index:10;left:50%;top:19%;transform:translate(-50%,-10px);opacity:0;pointer-events:none;background:rgba(8,15,14,.92);color:white;border:1px solid rgba(255,255,255,.14);border-radius:18px;padding:14px 17px;box-shadow:0 16px 45px rgba(0,0,0,.32);backdrop-filter:blur(20px);min-width:min(390px,calc(100vw - 32px));display:flex;align-items:center;gap:13px;transition:opacity .25s,transform .25s}.notice.show{opacity:1;transform:translate(-50%,0)}.notice-icon{display:grid;place-items:center;width:38px;height:38px;border-radius:12px;background:#ffcd65;color:#211707}.notice strong{display:block;font-size:.9rem}.notice span{display:block;margin-top:3px;color:#aebbb4;font-size:.78rem}.notice.email .notice-icon{background:#ffcf68}
     .transcript{position:absolute;z-index:5;left:50%;bottom:calc(clamp(10px,2.5vw,34px) + 280px);transform:translateX(-50%);width:min(620px,calc(100vw - 32px));text-align:center;color:white;font-size:clamp(1rem,2.2vw,1.25rem);font-weight:650;line-height:1.35;text-shadow:0 2px 10px rgba(0,0,0,.65);opacity:0;transition:opacity .2s}.transcript.show{opacity:1}.transcript span{display:inline-block;background:rgba(7,15,13,.74);padding:10px 15px;border-radius:14px;backdrop-filter:blur(12px)}
     .replan .sheet{animation:sheetFlash .7s ease}.delta{color:var(--mint);font-weight:800}@keyframes sheetFlash{50%{border-color:rgba(143,255,193,.56);box-shadow:0 22px 80px rgba(22,226,116,.18)}}
+    .youtube-player-shell{position:absolute;z-index:-1;right:0;bottom:0;width:200px;height:200px;overflow:hidden;opacity:.001;pointer-events:none}.youtube-player-shell iframe{width:200px!important;height:200px!important;border:0}
     .preflight{position:absolute;z-index:8;inset:0;display:none}.app.stage-select .preflight.select,.app.stage-confirm .preflight.confirm{display:flex}.app:not(.stage-driving)>.trip,.app:not(.stage-driving)>.sheet,.app:not(.stage-driving)>.route-label,.app:not(.stage-driving)>.transcript{display:none}.app.stage-select .map{filter:saturate(.72) brightness(.52)}.app.stage-select:after{content:"";position:absolute;z-index:7;inset:0;background:linear-gradient(180deg,rgba(5,12,10,.68),rgba(5,12,10,.3) 55%,rgba(5,12,10,.72));pointer-events:none}.select{align-items:flex-start;justify-content:center;padding:clamp(72px,13vh,140px) 20px}.select-panel{width:min(650px,100%);color:white}.select-kicker{font-size:.78rem;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:var(--mint);margin:0 0 16px}.select h1{font-size:clamp(2.3rem,7vw,4.8rem);line-height:.98;letter-spacing:-.06em;margin:0 0 30px}.origin-line{display:flex;align-items:center;gap:9px;color:#d7e2dc;font-size:.9rem;margin-top:16px}.origin-dot{width:9px;height:9px;border-radius:50%;background:#2387ff;box-shadow:0 0 0 5px rgba(35,135,255,.18)}.preflight-search{position:relative}.preflight-input{width:100%;height:72px;border:1px solid rgba(255,255,255,.22);border-radius:20px;background:rgba(7,15,13,.88);backdrop-filter:blur(20px);color:white;padding:0 22px;font-size:clamp(1.1rem,3vw,1.45rem);font-weight:650;box-shadow:0 20px 55px rgba(0,0,0,.28);outline:none}.preflight-input:focus{border-color:var(--mint);box-shadow:0 20px 55px rgba(0,0,0,.35),0 0 0 3px rgba(143,255,193,.1)}.preflight-suggestions{position:absolute;top:calc(100% + 9px);left:0;right:0;padding:7px;background:rgba(7,15,13,.96);border:1px solid rgba(255,255,255,.13);border-radius:17px;box-shadow:0 20px 55px rgba(0,0,0,.38);display:grid;gap:2px}.preflight-suggestions:empty{display:none}.preflight-suggestions .suggestion{padding:13px}.confirm{align-items:flex-end;justify-content:center;padding:20px 20px max(28px,env(safe-area-inset-bottom));pointer-events:none}.trip-confirm-card{pointer-events:auto;width:min(560px,100%);background:rgba(7,15,13,.91);backdrop-filter:blur(26px) saturate(140%);border:1px solid rgba(255,255,255,.15);border-radius:27px;padding:25px;box-shadow:var(--shadow);color:white}.confirm-label{margin:0 0 9px;color:var(--mint);font-size:.73rem;font-weight:800;letter-spacing:.15em;text-transform:uppercase}.trip-confirm-card h2{margin:0;font-size:clamp(1.55rem,5vw,2.35rem);line-height:1.05;letter-spacing:-.04em}.confirm-address{color:#aebbb4;margin:7px 0 21px;font-size:.9rem}.confirm-stats{display:flex;gap:10px;margin-bottom:22px}.confirm-stat{flex:1;padding:13px;background:rgba(255,255,255,.07);border-radius:14px}.confirm-stat strong,.confirm-stat span{display:block}.confirm-stat strong{font-size:1.15rem}.confirm-stat span{font-size:.7rem;color:#96a49d;text-transform:uppercase;letter-spacing:.08em;margin-top:4px}.start-commute{width:100%;min-height:60px;border:0;border-radius:17px;background:var(--mint);color:#07130e;font-weight:850;font-size:1.06rem;cursor:pointer}.start-commute:focus-visible{outline:3px solid white;outline-offset:3px}.change-destination{display:block;margin:14px auto 0;border:0;background:none;color:#aebbb4;font-weight:700;cursor:pointer}
     @media(max-width:760px){.app{min-height:590px}.trip{top:max(15px,env(safe-area-inset-top));left:14px;right:14px}.destination{padding:12px 14px}.address{display:none}.route-label{top:23%}.sheet{grid-template-columns:1fr auto;gap:18px;border-radius:26px;padding:19px}.up-next{grid-column:1/2;border:0;border-top:1px solid var(--line);padding:15px 0 0}.itinerary{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.up-item{grid-template-columns:28px 1fr}.up-icon{width:28px;height:28px}.up-min{display:none}.voice{grid-column:2/3;grid-row:1/3;align-self:center;min-width:94px}.mic{width:76px;height:76px}.voice-hint{display:none}.activity-title{font-size:1.25rem}.transcript{bottom:310px}.sheet{min-height:272px}.section-label{margin-bottom:9px}}
     @media(max-width:460px){.time-card .remaining{font-size:1.45rem}.eta{font-size:.8rem}.sheet{grid-template-columns:minmax(0,1fr) 78px;gap:13px;padding:17px}.activity-icon{width:42px;height:42px}.mic{width:68px;height:68px}.up-copy{font-size:.75rem}.up-item{display:flex;flex-direction:column;gap:5px;align-items:flex-start}.up-icon{width:26px;height:26px}.voice-label{font-size:.73rem}.trip{gap:8px}.destination h1{font-size:1.15rem}}
@@ -36,6 +37,7 @@
 </head>
 <body>
 <main class="app stage-select" id="app">
+  <div class="youtube-player-shell" aria-hidden="true"><div id="youtubePlayer"></div></div>
   <section class="map" id="mapSurface" aria-label="Route map from Oakland to work in San Francisco">
     <div id="mapboxCanvas" aria-hidden="true"></div>
     <div class="mock-map" id="mockMap"><svg viewBox="0 0 1400 900" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Map with a highlighted route across the Bay Bridge">
@@ -86,6 +88,7 @@
     <div class="voice" id="voice"><button class="mic" id="mic" aria-label="Talk to Commute Copilot" aria-pressed="false"></button><div class="voice-label" id="voiceLabel">Agent ready</div><div class="voice-hint">Tap to speak</div></div>
   </section>
 </main>
+<script src="/music-service.js"></script>
 <script>
   const icons={
     music:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg>',
@@ -114,6 +117,56 @@
   const state={stage:'select',commuteId:'commute-demo-01',destinationName:'',destinationAddress:'',origin:[-122.2711,37.8044],destinationCoordinate:null,distanceMeters:0,traffic:'',roadSummary:'',routeProvider:'mock',remainingMinutes:0,eta:new Date(),plan:plans.initial.map(x=>({...x})),currentIndex:3,voiceState:'idle',agentState:'waiting_for_confirmation',question:0,answers:[],alert:null};
   const $=id=>document.getElementById(id); $('mic').innerHTML=icons.mic;
   let commuteMap=null,originMarker=null,destinationMarker=null,searchTimer=null,searchSession=crypto.randomUUID();
+  let musicService=new CommuteMusic.MockMusicService(),musicSnapshot=musicService.getState(),lastActivityKey=null,activeLectureNarration=null,speechRunId=0,lastEmailIds=[];
+
+  async function initializeMusic(){
+    const configured=await CommuteMusic.createConfiguredService();
+    musicService=configured;musicService.subscribe(snapshot=>{musicSnapshot=snapshot;if(state.stage==='driving'&&state.plan[state.currentIndex]?.type==='music')renderActivityMeta()});
+    try{await musicService.initialize()}catch{musicService=new CommuteMusic.MockMusicService('YouTube playback unavailable');musicService.subscribe(snapshot=>{musicSnapshot=snapshot});await musicService.initialize()}
+    return musicService;
+  }
+  function currentActivity(){return state.plan[state.currentIndex]||state.plan[0]}
+  function renderActivityMeta(){const activity=currentActivity();if(!activity)return;const playback=activity.type==='music'?(musicSnapshot.state==='playing'?' · Playing':musicSnapshot.state==='loading'?' · Loading':' · Ready'):'';$('currentMeta').textContent=`${activity.meta}${playback}`}
+  function shouldResumeMusic(){return state.stage==='driving'&&currentActivity()?.type==='music'&&state.agentState==='following_plan'}
+  function stopLectureNarration(){if(!activeLectureNarration)return;speechRunId++;activeLectureNarration=null;lastActivityKey=null;if('speechSynthesis'in window)speechSynthesis.cancel()}
+  async function loadLectureContent(activity){
+    if(activity.fullLectureScript)return activity;
+    try{const params=new URLSearchParams({userId:'demo-user',availableMinutes:String(activity.minutes)});const data=await fetch(`/api/learning/lesson?${params}`).then(r=>r.ok?r.json():Promise.reject());if(data.lesson)Object.assign(activity,{lessonId:data.lesson.id,title:data.lesson.title,topic:data.lesson.topic,courseTitle:'Introduction to Bird Behavior and Neuroscience',difficulty:data.lesson.difficulty,shortDescription:data.lesson.shortDescription,fullLectureScript:data.lesson.fullLectureScript,minutes:data.lesson.estimatedDurationMinutes,remaining:data.lesson.estimatedDurationMinutes})}catch{}
+    return activity
+  }
+  async function playLecture(activity){
+    await loadLectureContent(activity);if(!activity.fullLectureScript||state.agentState!=='following_plan'||state.voiceState!=='idle')return;
+    const lessonId=activity.lessonId||activity.title;activeLectureNarration=lessonId;render();
+    say(activity.fullLectureScript,()=>{activeLectureNarration=null;if(currentActivity()===activity&&state.agentState==='following_plan')advanceActivity()},`Now playing: ${activity.title}`,'lecture')
+  }
+  async function loadPresentationContent(activity){
+    if(activity.fullPresentationPrepScript)return activity;
+    try{const data=await fetch('/api/presentation/upcoming/demo-user').then(r=>r.ok?r.json():Promise.reject());const prep=data.presentation;if(prep)Object.assign(activity,{presentationId:prep.id,presentationTitle:prep.title,fullPresentationPrepScript:prep.fullPrepScript,meta:prep.title})}catch{}
+    return activity
+  }
+  async function playPresentationPrep(activity){
+    await loadPresentationContent(activity);if(!activity.fullPresentationPrepScript||state.agentState!=='following_plan'||state.voiceState!=='idle')return;
+    activeLectureNarration=activity.presentationId||activity.title;render();
+    say(activity.fullPresentationPrepScript,()=>{activeLectureNarration=null;if(currentActivity()===activity&&state.agentState==='following_plan')advanceActivity()},`Preparing: ${activity.presentationTitle||activity.title}`,'presentation')
+  }
+  async function loadEmailBriefing(activity){
+    if(activity.emailSummaryScript)return activity;
+    try{const params=new URLSearchParams({userId:'demo-user',availableMinutes:String(activity.minutes||5)});const data=await fetch(`/api/email/summary?${params}`).then(r=>r.ok?r.json():Promise.reject());Object.assign(activity,{emailIds:(data.emails||[]).map(email=>email.id),emailSummaryScript:data.spokenSummary})}catch{}
+    return activity
+  }
+  async function playEmailBriefing(activity){
+    await loadEmailBriefing(activity);if(!activity.emailSummaryScript||state.agentState!=='following_plan'||state.voiceState!=='idle')return;
+    lastEmailIds=activity.emailIds||[];activeLectureNarration=`email:${lastEmailIds.join(',')}`;render();
+    say(activity.emailSummaryScript,()=>{activeLectureNarration=null;if(currentActivity()===activity&&state.agentState==='following_plan')advanceActivity()},'Playing your priority email briefing','email')
+  }
+  async function syncActivityAudio(){
+    const activity=currentActivity();if(state.stage!=='driving'||!activity)return;
+    const key=activity.type==='lecture'?`lecture:${activity.lessonId||activity.title}`:activity.type==='presentation'?`presentation:${activity.presentationId||activity.title}`:activity.type==='email'?`email:${(activity.emailIds||[]).join(',')}`:activity.type;
+    if(state.agentState!=='following_plan'||state.voiceState!=='idle'){await media('pause');return}
+    if(key===lastActivityKey)return;lastActivityKey=key;
+    if(activity.type==='music')await media('play');else await media('pause');
+    if(activity.type==='lecture')await playLecture(activity);else if(activity.type==='presentation')await playPresentationPrep(activity);else if(activity.type==='email')await playEmailBriefing(activity)
+  }
 
   function loadMapboxScript(){return new Promise((resolve,reject)=>{if(window.mapboxgl)return resolve();const s=document.createElement('script');s.src='https://api.mapbox.com/mapbox-gl-js/v3.32.0/mapbox-gl.js';s.onload=resolve;s.onerror=reject;document.head.appendChild(s)})}
   async function initializeMap(){
@@ -171,51 +224,64 @@
   function render(){
     const a=state.plan[state.currentIndex]||state.plan[0]; const pct=Math.max(0,Math.min(100,((a.minutes-a.remaining)/a.minutes)*100));
     $('tripRemaining').textContent=fmtTrip(state.remainingMinutes); $('eta').textContent=fmtTime(state.eta);
-    $('activityIcon').innerHTML=icons[a.type]||icons.arrival; $('currentTitle').textContent=a.title; $('currentMeta').textContent=a.meta;
+    $('activityIcon').innerHTML=icons[a.type]||icons.arrival; $('currentTitle').textContent=a.title; renderActivityMeta();
     $('remainingText').textContent=`${a.remaining} min left`; $('progressText').textContent=`${a.minutes-a.remaining} of ${a.minutes} min`; $('progressBar').style.width=`${pct}%`;
     document.querySelector('.progress').setAttribute('aria-valuenow',Math.round(pct));
     const upcoming=[]; for(let i=1;i<=3;i++){const item=state.plan[(state.currentIndex+i)%state.plan.length]; if(item&&item!==a)upcoming.push(item)}
     $('itinerary').innerHTML=upcoming.map(x=>`<div class="up-item"><div class="up-icon">${icons[x.type]}</div><div class="up-copy">${x.title}</div><div class="up-min">${x.minutes} min</div></div>`).join('');
+    syncActivityAudio().catch(()=>{});
   }
   function setVoice(mode,label){state.voiceState=mode; $('voice').className=`voice ${mode}`; $('voiceLabel').textContent=label||({idle:'Agent ready',listening:'Listening…',processing:'Thinking…',speaking:'Agent speaking…'}[mode]); $('mic').setAttribute('aria-pressed',mode==='listening')}
   function showNotice(title,body,kind=''){ $('noticeTitle').textContent=title;$('noticeBody').textContent=body;$('notice').className=`notice ${kind} show`;clearTimeout(showNotice.t);showNotice.t=setTimeout(()=>$('notice').classList.remove('show'),4200)}
-  function say(text,after){
-    setVoice('speaking');$('transcript').querySelector('span').textContent=text;$('transcript').classList.add('show');
-    if('speechSynthesis'in window){speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);u.rate=1.02;u.pitch=.97;u.onend=done;speechSynthesis.speak(u);setTimeout(done,Math.max(3500,text.length*55))}else setTimeout(done,Math.max(2200,text.length*45));
-    let ran=false;function done(){if(ran)return;ran=true;$('transcript').classList.remove('show');setVoice('idle');after?.()}
+  function say(text,after,displayText=text,kind='agent'){
+    const runId=++speechRunId;if(kind!=='agent')activeLectureNarration=currentActivity()?.lessonId||currentActivity()?.presentationId||currentActivity()?.title||kind;
+    const resumeAfterSpeech=shouldResumeMusic();if(resumeAfterSpeech)media('pause');
+    setVoice('speaking');$('transcript').querySelector('span').textContent=displayText;$('transcript').classList.add('show');
+    const expectedMs=kind!=='agent'?(currentActivity()?.minutes||5)*60000:Math.max(3500,text.length*55);
+    if('speechSynthesis'in window){speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);u.rate=kind!=='agent'?.82:1.02;u.pitch=.97;u.onend=done;u.onerror=done;speechSynthesis.speak(u);setTimeout(done,expectedMs+15000)}else setTimeout(done,expectedMs);
+    let ran=false;function done(){if(ran||runId!==speechRunId)return;ran=true;if(kind!=='agent')activeLectureNarration=null;$('transcript').classList.remove('show');setVoice('idle');after?.();if(resumeAfterSpeech&&shouldResumeMusic())media('play');syncActivityAudio().catch(()=>{})}
   }
   async function api(path,payload,fallback){
     try{const ctrl=new AbortController();setTimeout(()=>ctrl.abort(),2200);const res=await fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),signal:ctrl.signal});if(!res.ok)throw 0;return await res.json()}catch{return fallback}
   }
-  function media(action){fetch(`/api/media/${action}`,{method:'POST'}).catch(()=>{})}
+  async function media(action){const method=action==='play'?'resume':action;if(typeof musicService[method]==='function')return musicService[method]();return false}
   const prompts=["","How important is your ornithology lecture today?","Do you want a productive drive or something lighter?"];
   function beginPlanning(){state.question=0;state.answers=[];prompts[0]=`You have about ${fmtTrip(state.remainingMinutes)} to ${state.destinationName}. What matters most during this drive?`;say(prompts[0],listen)}
   function listen(){
+    stopLectureNarration();
     setVoice('listening');
     const Recognition=window.SpeechRecognition||window.webkitSpeechRecognition;
     if(!Recognition){setTimeout(()=>handleSpeech(["I have a presentation right after I arrive.","Not very. It isn’t due until Friday.","Something lighter. I’m tired."][state.question]||"Give me more music."),1200);return}
     const rec=new Recognition();rec.lang='en-US';rec.interimResults=true;rec.continuous=false;let final='';
     rec.onresult=e=>{final=Array.from(e.results).map(r=>r[0].transcript).join(' ');$('transcript').querySelector('span').textContent=final;$('transcript').classList.add('show')};
-    rec.onerror=()=>{setVoice('idle');$('transcript').classList.remove('show')};rec.onend=()=>{if(final)handleSpeech(final);else setVoice('idle')};rec.start();
+    rec.onerror=()=>{setVoice('idle');$('transcript').classList.remove('show');syncActivityAudio().catch(()=>{})};rec.onend=()=>{if(final)handleSpeech(final);else{setVoice('idle');syncActivityAudio().catch(()=>{})}};rec.start();
   }
   function handleSpeech(text){$('transcript').classList.remove('show');setVoice('processing');
     const lower=text.toLowerCase();
+    if(/check.*email|important email|anything urgent|catch me up on email|summarize my inbox|need to respond|anything important before/.test(lower)){summarizeInbox(/urgent/.test(lower)?3:5);return}
+    if(/read me (that|the) email|read that email/.test(lower)&&lastEmailIds[0]){readFullEmail(lastEmailIds[0]);return}
     if(lower.includes('urgent email')||lower.includes('presentation slides changed')){triggerUrgentEmail();return}
     if(lower.includes('next activity')){advanceActivity();say('Moving to the next activity.');return}
     if(state.agentState==='waiting_for_confirmation'){
       if(/yes|sounds good|start/.test(lower)){state.agentState='following_plan';state.currentIndex=0;render();say('Great. Starting with your priority email briefing. I’ll keep you posted.');scheduleEmail();return}
       replan(text);return;
     }
-    if(state.agentState==='interrupting'){say('Your manager says the presentation slides changed. The new version emphasizes the launch timeline. I’ve added that to presentation prep.',()=>{state.agentState='following_plan';media('play');showNotice('Added to presentation prep','Music will resume now.');});return}
+    if(state.agentState==='interrupting'){say('Your manager says the presentation slides changed. The new version emphasizes the launch timeline. I’ve added that to presentation prep.',()=>{state.agentState='following_plan';if(shouldResumeMusic())media('play');showNotice('Added to presentation prep',shouldResumeMusic()?'Music will resume now.':'Your updated plan is ready.');});return}
     if(state.question<3){state.answers.push(text);state.question++;if(state.question<3){say(prompts[state.question],listen)}else createPlan();return}
     replan(text);
+  }
+  async function summarizeInbox(availableMinutes=5){
+    try{const params=new URLSearchParams({userId:'demo-user',availableMinutes:String(availableMinutes)});const data=await fetch(`/api/email/summary?${params}`).then(r=>r.ok?r.json():Promise.reject());lastEmailIds=(data.emails||[]).map(email=>email.id);say(data.spokenSummary||'You have no important email that needs attention.')}catch{say('I couldn’t reach your inbox right now. I’ll keep it queued for later.')}
+  }
+  async function readFullEmail(emailId){
+    try{const data=await fetch(`/api/email/message/${encodeURIComponent(emailId)}?userId=demo-user`).then(r=>r.ok?r.json():Promise.reject());say(data.result?.spokenContent||'I couldn’t find that email.')}catch{say('I couldn’t retrieve that email right now.')}
   }
   async function createPlan(){
     const fallback={spokenResponse:"You have just under two hours. Since your presentation is important and you’re feeling tired, I’ll prioritize presentation prep, keep the lecture short, and add music breaks. Sound good?",plan:plans.initial};
     const result=await api('/api/plan',{userId:'demo-user',commuteDurationMinutes:state.remainingMinutes,destination:state.destinationName,eta:state.eta.toISOString(),energyLevel:3,priorities:[{activity:'presentation',significance:10,urgency:8},{activity:'lecture',significance:4,urgency:2}],context:{lectureDue:'Friday',presentationAfterArrival:true,routeProvider:state.routeProvider,distanceMeters:state.distanceMeters,traffic:state.traffic,roadSummary:state.roadSummary},utterances:state.answers},fallback);
     state.commuteId=result.commuteId||state.commuteId;state.plan=(result.plan||fallback.plan).map(normalizeActivity);state.currentIndex=0;state.agentState='waiting_for_confirmation';render();say(result.spokenResponse||fallback.spokenResponse,listen);
   }
-  function normalizeActivity(x){const type=x.type==='presentation_prep'?'presentation':x.type==='email_roundup'?'email':x.type;const labels={email:'Email Briefing',presentation:'Presentation Prep',music:'Morning Mix',lecture:'Ornithology Lecture',arrival:'Arrival Summary'};const mins=x.minutes||x.duration||10;return{type,title:x.title||x.label||labels[type]||'Commute Activity',meta:x.meta||({email:'Priority messages',presentation:'Key points · rehearsal',music:'Your favorites',lecture:'Cornell · Week 4',arrival:'Your day at a glance'}[type]||''),minutes:mins,remaining:x.remaining||mins}}
+  function normalizeActivity(x){const type=x.type==='presentation_prep'||x.type==='presentation_practice'?'presentation':x.type==='email_roundup'?'email':x.type==='arrival_summary'?'arrival':x.type;const labels={email:'Email Briefing',presentation:'Presentation Prep',music:'Morning Mix',lecture:'Bird Behavior Lesson',arrival:'Arrival Summary'};const mins=x.minutes||x.duration||10;return{...x,type,title:x.title||x.label||labels[type]||'Commute Activity',meta:x.meta||x.courseTitle||x.presentationTitle||({email:'Priority messages',presentation:'Key points · rehearsal',music:'Your favorites',lecture:'Introduction to Bird Behavior and Neuroscience',arrival:'Your day at a glance'}[type]||''),minutes:mins,remaining:x.remaining||mins}}
   async function replan(feedback){
     state.agentState='replanning';document.body.classList.add('replan');showNotice('Updating plan…','Lecture ↓ 12 min  ·  Music ↑ 20 min');
     const fallback={spokenResponse:"Got it. I’ll shorten the lecture and add another music block.",interruptCurrentActivity:true,updatedPlan:plans.lighter};
@@ -223,12 +289,12 @@
     setTimeout(()=>{if(result.interruptCurrentActivity)media('pause');state.plan=(result.updatedPlan||result.plan||fallback.updatedPlan).map(normalizeActivity);state.currentIndex=0;state.agentState='following_plan';render();document.body.classList.remove('replan');say(result.spokenResponse||fallback.spokenResponse)},750)
   }
   async function triggerUrgentEmail(){
-    if(state.agentState==='interrupting')return;state.agentState='interrupting';setVoice('processing');
+    if(state.agentState==='interrupting')return;const musicWasPlaying=currentActivity()?.type==='music';stopLectureNarration();state.agentState='interrupting';setVoice('processing');if(musicWasPlaying)media('pause');
     const fallback={interruptCurrentActivity:true,spokenResponse:'You just received an important email about your presentation. Would you like the summary?'};
     const result=await api('/api/event',{commuteId:state.commuteId,type:'email',summary:'Boss says presentation slides changed.',sender:'Manager',timestamp:new Date().toISOString(),urgency:10,significance:9},fallback);
-    if(result.interruptCurrentActivity!==false){media('pause');showNotice('Important email','Presentation slides changed','email');say(result.spokenResponse||fallback.spokenResponse,listen)}else{state.agentState='following_plan';showNotice('Email queued','I’ll include it in your next briefing.');setVoice('idle')}
+    if(result.interruptCurrentActivity!==false){media('pause');showNotice('Important email','Presentation slides changed','email');say(result.spokenResponse||fallback.spokenResponse,listen)}else{state.agentState='following_plan';showNotice('Email queued','I’ll include it in your next briefing.');setVoice('idle');if(musicWasPlaying)media('play')}
   }
-  function advanceActivity(){state.currentIndex=(state.currentIndex+1)%state.plan.length;render()}
+  function advanceActivity(){stopLectureNarration();state.currentIndex=(state.currentIndex+1)%state.plan.length;render()}
   function scheduleEmail(){clearTimeout(scheduleEmail.t);scheduleEmail.t=setTimeout(triggerUrgentEmail,45000)}
   $('mic').addEventListener('click',()=>{if(state.voiceState==='listening')return;if(!state.answers.length&&state.question===0&&state.agentState==='following_plan')beginPlanning();else listen()});
   $('destinationButton').addEventListener('click',()=>{const open=!$('destinationSearch').classList.contains('open');$('destinationSearch').classList.toggle('open',open);$('destinationButton').setAttribute('aria-expanded',String(open));if(open)$('destinationInput').focus()});
@@ -236,7 +302,7 @@
   $('suggestions').addEventListener('click',e=>{const button=e.target.closest('[data-id]');if(button)chooseDestination(button.dataset.id)});
   $('startDestinationInput').addEventListener('input',e=>{clearTimeout(searchTimer);searchTimer=setTimeout(()=>findDestinations(e.target.value,'startSuggestions'),220)});
   $('startSuggestions').addEventListener('click',e=>{const button=e.target.closest('[data-id]');if(button)selectStartDestination(button.dataset.id)});
-  $('startCommute').addEventListener('click',()=>{state.agentState='following_plan';setStage('driving');beginPlanning()});
+  $('startCommute').addEventListener('click',()=>{initializeMusic().catch(()=>{});state.agentState='following_plan';lastActivityKey=null;setStage('driving');beginPlanning()});
   $('changeDestination').addEventListener('click',()=>{state.destinationCoordinate=null;state.destinationName='';state.destinationAddress='';$('startDestinationInput').disabled=false;$('startDestinationInput').value='';setStage('select');setTimeout(()=>$('startDestinationInput').focus(),0)});
   document.addEventListener('click',e=>{if(!e.target.closest('.destination'))closeDestinationSearch()});
   document.addEventListener('keydown',e=>{if(e.target.matches('input'))return;if(e.key.toLowerCase()==='e')triggerUrgentEmail();if(e.key.toLowerCase()==='n')advanceActivity();if(e.key===' ') {$('mic').click();e.preventDefault()}});

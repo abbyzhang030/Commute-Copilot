@@ -19,9 +19,9 @@ export async function getRouteContext(_userId: string, destination?: string) {
 
 export async function getLectureContext(_userId: string) {
   return {
-    course: "Ornithology (Cornell)",
-    nextLecture: "Lecture 7: Migration and Navigation",
-    transcriptMinutes: 48,
+    course: "Introduction to Bird Behavior and Neuroscience",
+    nextLecture: "Magnetic Navigation in Migratory Birds",
+    transcriptMinutes: 8,
     due: "Friday",
   };
 }

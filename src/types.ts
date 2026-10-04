@@ -6,6 +6,17 @@ export interface PlanItem {
   significance: number;
   urgency: number;
   label?: string;
+  lessonId?: string;
+  courseTitle?: string;
+  topic?: string;
+  difficulty?: string;
+  shortDescription?: string;
+  fullLectureScript?: string;
+  presentationId?: string;
+  presentationTitle?: string;
+  fullPresentationPrepScript?: string;
+  emailIds?: string[];
+  emailSummaryScript?: string;
 }
 
 export interface Priority {

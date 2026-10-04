@@ -3,6 +3,7 @@ import { interpretKeywords } from "../interpret.js";
 
 export const COORDINATOR_INSTRUCTIONS = `You interpret voice feedback for an adaptive commute coordinator.
 Return JSON only. Only set changes the driver actually requested. Changes are temporary unless the driver explicitly says always, from now on, or never again.
+If the driver asks to continue, resume, or play their bird course, increase lecture priority and lectureFactor; do not generate lesson content.
 The required JSON shape is:
 {"musicDelta":number,"lectureFactor":number,"loadChange":"lower"|"same"|"higher","energyLevel":number|null,"priorityUpdates":[{"activity":string,"significance":number|null,"urgency":number|null}],"drop":string[],"scope":"temporary"|"long_term","summary":string}`;
 

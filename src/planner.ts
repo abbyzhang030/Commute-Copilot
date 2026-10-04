@@ -15,7 +15,7 @@ export interface PlannerInput {
   learnedMusicDelta: number; // confidence-weighted contextual nudge
   temp: TempState;
   currentActivity?: string | null;
-  startWith: "auto" | "current" | "music" | "event";
+  startWith: "auto" | "current" | "music" | "lecture" | "event";
   includeEmailRoundup: boolean;
   urgentEvent?: { summary: string; urgency: number; significance: number } | null;
   completed?: Record<string, number>; // minutes already spent per canonical activity this commute
@@ -133,6 +133,7 @@ export function buildPlan(inp: PlannerInput): PlanItem[] {
     if (i > 0) seq.unshift(...seq.splice(i, 1));
   };
   if (inp.startWith === "music") moveFirst((p) => p.type === "music");
+  else if (inp.startWith === "lecture") moveFirst((p) => p.type === "lecture");
   else if (inp.startWith === "current" && inp.currentActivity) moveFirst((p) => sameActivity(p.type, inp.currentActivity));
   else if (inp.startWith === "event") {
     // after the alert, resume presentation work first if the event touched it

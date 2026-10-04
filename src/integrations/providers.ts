@@ -1,7 +1,9 @@
 import * as mock from "./mock.js";
 import { mockMapService, withMapFallback, type Coordinate } from "./map-service.js";
+import { getCourseWithLessons, getLearningProgress } from "../content-repository.js";
+import { getInboxBriefing } from "./email-agent.js";
 
-export interface EmailItem { from: string; subject: string; urgency: number; summary: string }
+export interface EmailItem { id?: string; from: string; subject: string; urgency: number; importance?: number; summary: string; requiresResponse?: boolean; suggestedAction?: string }
 
 const configured = (name: string) => Boolean(process.env[name]?.trim());
 
@@ -62,6 +64,11 @@ async function executorImportantEmails(userId: string): Promise<EmailItem[] | nu
 }
 
 export async function getImportantEmails(userId: string): Promise<EmailItem[]> {
+  if (userId === "demo-user") {
+    const briefing = await getInboxBriefing(userId, 7);
+    return briefing.emails.map((email) => ({ id: email.id, from: email.senderName, subject: email.subject, urgency: email.urgency,
+      importance: email.importance, summary: email.shortSummary, requiresResponse: email.requiresResponse, suggestedAction: email.suggestedAction }));
+  }
   try {
     return await gmailImportantEmails() ?? await executorImportantEmails(userId) ?? await mock.getImportantEmails(userId);
   } catch (error) {
@@ -80,7 +87,17 @@ export async function getRouteContext(userId: string, destination?: string) {
   );
   return { ...route, userId };
 }
-export const getLectureContext = mock.getLectureContext;
+export async function getLectureContext(userId: string) {
+  try {
+    const course = await getCourseWithLessons("bird-behavior-neuroscience");
+    const progress = await getLearningProgress(userId, "bird-behavior-neuroscience");
+    const next = course?.lessons.find((lesson) => lesson.id === progress?.currentLessonId) ?? course?.lessons[0];
+    if (course && next) return { course: course.title, nextLecture: next.title, transcriptMinutes: next.estimatedDurationMinutes, due: "Friday" };
+  } catch (error) {
+    console.warn(`[integrations] lecture database unavailable; using metadata fallback (${(error as Error).message})`);
+  }
+  return mock.getLectureContext(userId);
+}
 
 export async function spotifyAccessToken(): Promise<string | null> {
   const clientId = process.env.SPOTIFY_CLIENT_ID;
@@ -122,11 +139,12 @@ export async function createRealtimeClientSecret(userId: string): Promise<any | 
 export function integrationStatus() {
   return {
     database: configured("DATABASE_URL") ? "neon" : "local",
-    email: configured("GOOGLE_CLIENT_ID") && configured("GOOGLE_CLIENT_SECRET") && configured("GOOGLE_REFRESH_TOKEN") ? "gmail" : configured("EXECUTOR_EMAIL_URL") && configured("EXECUTOR_API_KEY") ? "executor" : "mock",
+    email: configured("DATABASE_URL") ? "neon_demo" : "local_demo",
     map: configured("MAPBOX_ACCESS_TOKEN") || configured("MAPBOX_PUBLIC_TOKEN") ? "mapbox" : "mock",
     spotify: configured("SPOTIFY_CLIENT_ID") && configured("SPOTIFY_CLIENT_SECRET") && configured("SPOTIFY_REFRESH_TOKEN") ? "spotify" : "mock",
     voice: configured("OPENAI_API_KEY") ? "openai_realtime" : "browser_speech",
     calendar: "mock",
-    lecture: "mock",
+    lecture: configured("DATABASE_URL") ? "neon_seeded" : "local_database",
+    presentation: configured("DATABASE_URL") ? "neon_seeded" : "local_database",
   };
 }
