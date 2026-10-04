@@ -3,7 +3,7 @@ import { getDb } from "./db.js";
 import { buildPlan, type BaselinePrefs } from "./planner.js";
 import { contextKey, learnedMusicDelta, observe } from "./learning.js";
 import { interpretUtterance } from "./mastra/agent.js";
-import { getLectureContext } from "./integrations/mock.js";
+import { getLectureContext } from "./integrations/providers.js";
 import { noChange, emptyTemp, type EventIn, type Interpretation, type PlanItem, type Priority, type TempState } from "./types.js";
 import { clamp, daysUntil, durationPhrase, normalizeActivity, periodOfDay, sameActivity } from "./util.js";
 

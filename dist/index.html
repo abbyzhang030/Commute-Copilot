@@ -121,6 +121,7 @@
   async function api(path,payload,fallback){
     try{const ctrl=new AbortController();setTimeout(()=>ctrl.abort(),2200);const res=await fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),signal:ctrl.signal});if(!res.ok)throw 0;return await res.json()}catch{return fallback}
   }
+  function media(action){fetch(`/api/media/${action}`,{method:'POST'}).catch(()=>{})}
   const prompts=["What matters most during this drive?","How important is your ornithology lecture today?","Do you want a productive drive or something lighter?"];
   function beginPlanning(){state.question=0;state.answers=[];say(prompts[0],listen)}
   function listen(){
@@ -139,7 +140,7 @@
       if(/yes|sounds good|start/.test(lower)){state.agentState='following_plan';state.currentIndex=0;render();say('Great. Starting with your priority email briefing. I’ll keep you posted.');scheduleEmail();return}
       replan(text);return;
     }
-    if(state.agentState==='interrupting'){say('Your manager says the presentation slides changed. The new version emphasizes the launch timeline. I’ve added that to presentation prep.',()=>{state.agentState='following_plan';showNotice('Added to presentation prep','Music will resume now.');});return}
+    if(state.agentState==='interrupting'){say('Your manager says the presentation slides changed. The new version emphasizes the launch timeline. I’ve added that to presentation prep.',()=>{state.agentState='following_plan';media('play');showNotice('Added to presentation prep','Music will resume now.');});return}
     if(state.question<3){state.answers.push(text);state.question++;if(state.question<3){say(prompts[state.question],listen)}else createPlan();return}
     replan(text);
   }
@@ -153,13 +154,13 @@
     state.agentState='replanning';document.body.classList.add('replan');showNotice('Updating plan…','Lecture ↓ 12 min  ·  Music ↑ 20 min');
     const fallback={spokenResponse:"Got it. I’ll shorten the lecture and add another music block.",interruptCurrentActivity:true,updatedPlan:plans.lighter};
     const result=await api('/api/replan',{userId:'demo-user',commuteId:state.commuteId,remainingMinutes:state.remainingMinutes,currentActivity:state.plan[state.currentIndex]?.type,userFeedback:feedback,newEvents:[]},fallback);
-    setTimeout(()=>{state.plan=(result.updatedPlan||result.plan||fallback.updatedPlan).map(normalizeActivity);state.currentIndex=0;state.agentState='following_plan';render();document.body.classList.remove('replan');say(result.spokenResponse||fallback.spokenResponse)},750)
+    setTimeout(()=>{if(result.interruptCurrentActivity)media('pause');state.plan=(result.updatedPlan||result.plan||fallback.updatedPlan).map(normalizeActivity);state.currentIndex=0;state.agentState='following_plan';render();document.body.classList.remove('replan');say(result.spokenResponse||fallback.spokenResponse)},750)
   }
   async function triggerUrgentEmail(){
     if(state.agentState==='interrupting')return;state.agentState='interrupting';setVoice('processing');
     const fallback={interruptCurrentActivity:true,spokenResponse:'You just received an important email about your presentation. Would you like the summary?'};
     const result=await api('/api/event',{commuteId:state.commuteId,type:'email',summary:'Boss says presentation slides changed.',sender:'Manager',timestamp:new Date().toISOString(),urgency:10,significance:9},fallback);
-    if(result.interruptCurrentActivity!==false){showNotice('Important email','Presentation slides changed','email');say(result.spokenResponse||fallback.spokenResponse,listen)}else{state.agentState='following_plan';showNotice('Email queued','I’ll include it in your next briefing.');setVoice('idle')}
+    if(result.interruptCurrentActivity!==false){media('pause');showNotice('Important email','Presentation slides changed','email');say(result.spokenResponse||fallback.spokenResponse,listen)}else{state.agentState='following_plan';showNotice('Email queued','I’ll include it in your next briefing.');setVoice('idle')}
   }
   function advanceActivity(){state.currentIndex=(state.currentIndex+1)%state.plan.length;render()}
   function scheduleEmail(){clearTimeout(scheduleEmail.t);scheduleEmail.t=setTimeout(triggerUrgentEmail,45000)}
