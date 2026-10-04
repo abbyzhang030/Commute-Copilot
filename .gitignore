@@ -1,0 +1,26 @@
+# Environment variables and local secrets
+.env
+.env.*
+!.env.example
+*.local
+
+# Credentials and private keys
+*.pem
+*.key
+*.p12
+*.pfx
+credentials.json
+secrets.json
+
+# Dependencies and generated output
+node_modules/
+.next/
+out/
+build/
+coverage/
+
+# Local tooling and operating-system files
+.DS_Store
+*.log
+.sites-runtime/
+.vercel/
