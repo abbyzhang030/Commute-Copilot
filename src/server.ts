@@ -10,7 +10,8 @@ import { HttpError, createPlan, replan, handleEvent, saveActivityResult, complet
 import { getLearned } from "./learning.js";
 import { llmEnabled } from "./mastra/agent.js";
 import { configuredModelProvider } from "./mastra/agent.js";
-import { createMapKitToken, createRealtimeClientSecret, getImportantEmails, integrationStatus, spotifyPlayback } from "./integrations/providers.js";
+import { createRealtimeClientSecret, getImportantEmails, integrationStatus, spotifyPlayback } from "./integrations/providers.js";
+import { getMapService, mapboxPublicToken, mockMapService, withMapFallback, type Coordinate } from "./integrations/map-service.js";
 
 export const app = new Hono();
 app.use("*", cors());
@@ -44,14 +45,43 @@ app.post("/api/media/:action", async (c) => {
   const action = z.enum(["play", "pause"]).parse(c.req.param("action"));
   return c.json(await spotifyPlayback(action));
 });
-app.get("/api/mapkit/token", (c) => {
-  const requestOrigin = c.req.header("origin") ?? new URL(c.req.url).origin;
-  const allowedOrigin = process.env.PUBLIC_APP_ORIGIN ?? requestOrigin;
-  if (process.env.PUBLIC_APP_ORIGIN && requestOrigin !== process.env.PUBLIC_APP_ORIGIN) return c.json({ error: "origin_not_allowed" }, 403);
-  const token = createMapKitToken(allowedOrigin);
-  if (!token) return c.json({ error: "mapkit_not_configured" }, 503);
-  c.header("Cache-Control", "no-store");
-  return c.json({ token, expiresIn: 300 });
+const coordinate = z.tuple([z.coerce.number().min(-180).max(180), z.coerce.number().min(-90).max(90)]);
+const coordinateQuery = (value: string | undefined, fallback: Coordinate): Coordinate => {
+  if (!value) return fallback;
+  return coordinate.parse(value.split(","));
+};
+app.get("/api/map/config", (c) => {
+  const token = mapboxPublicToken();
+  return c.json({ provider: token ? "mapbox" : "mock", publicToken: token });
+});
+app.get("/api/map/search", async (c) => {
+  const query = z.string().min(2).max(256).parse(c.req.query("q"));
+  const sessionToken = z.string().uuid().parse(c.req.query("sessionToken"));
+  const proximity = coordinateQuery(c.req.query("proximity"), [-122.2711, 37.8044]);
+  const suggestions = await withMapFallback(
+    (service) => service.suggest(query, sessionToken, proximity),
+    () => mockMapService.suggest(query, sessionToken, proximity),
+  );
+  return c.json({ suggestions });
+});
+app.get("/api/map/retrieve/:id", async (c) => {
+  const id = z.string().min(1).max(512).parse(c.req.param("id"));
+  const sessionToken = z.string().uuid().parse(c.req.query("sessionToken"));
+  const destination = await withMapFallback(
+    (service) => service.retrieve(id, sessionToken),
+    () => mockMapService.retrieve(id, sessionToken),
+  );
+  return c.json(destination);
+});
+app.get("/api/map/directions", async (c) => {
+  const origin = coordinateQuery(c.req.query("origin"), [-122.2711, 37.8044]);
+  const destination = coordinateQuery(c.req.query("destination"), [-122.3999, 37.7936]);
+  const destinationName = z.string().max(180).default("Work").parse(c.req.query("destinationName"));
+  const route = await withMapFallback(
+    (service) => service.directions(origin, destination, destinationName),
+    () => mockMapService.directions(origin, destination, destinationName),
+  );
+  return c.json(route);
 });
 app.post("/api/voice/session", async (c) => {
   const body = z.object({ userId: z.string().min(1).default("demo-user") }).parse(await c.req.json().catch(() => ({})));

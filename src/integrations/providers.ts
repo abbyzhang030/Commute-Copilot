@@ -1,5 +1,5 @@
-import { createPrivateKey, createSign } from "node:crypto";
 import * as mock from "./mock.js";
+import { mockMapService, withMapFallback, type Coordinate } from "./map-service.js";
 
 export interface EmailItem { from: string; subject: string; urgency: number; summary: string }
 
@@ -71,7 +71,15 @@ export async function getImportantEmails(userId: string): Promise<EmailItem[]> {
 }
 
 export const getCalendarContext = mock.getCalendarContext;
-export const getRouteContext = mock.getRouteContext;
+export async function getRouteContext(userId: string, destination?: string) {
+  const origin: Coordinate = [-122.2711, 37.8044];
+  const end: Coordinate = [-122.3999, 37.7936];
+  const route = await withMapFallback(
+    (service) => service.directions(origin, end, destination),
+    () => mockMapService.directions(origin, end, destination),
+  );
+  return { ...route, userId };
+}
 export const getLectureContext = mock.getLectureContext;
 
 export async function spotifyAccessToken(): Promise<string | null> {
@@ -99,24 +107,6 @@ export async function spotifyPlayback(action: "play" | "pause"): Promise<{ real:
   return { real: true, ok: response.ok || response.status === 204 };
 }
 
-const b64url = (value: string | Buffer) => Buffer.from(value).toString("base64url");
-
-export function createMapKitToken(origin: string): string | null {
-  const teamId = process.env.APPLE_MAPS_TEAM_ID;
-  const keyId = process.env.APPLE_MAPS_KEY_ID;
-  const privateKey = process.env.APPLE_MAPS_PRIVATE_KEY?.replace(/\\n/g, "\n");
-  if (!teamId || !keyId || !privateKey) return null;
-  const now = Math.floor(Date.now() / 1000);
-  const header = b64url(JSON.stringify({ alg: "ES256", kid: keyId, typ: "JWT" }));
-  const payload = b64url(JSON.stringify({ iss: teamId, iat: now, exp: now + 300, scope: "mapkit_js", origin }));
-  const unsigned = `${header}.${payload}`;
-  const signer = createSign("SHA256");
-  signer.update(unsigned);
-  signer.end();
-  const signature = signer.sign({ key: createPrivateKey(privateKey), dsaEncoding: "ieee-p1363" });
-  return `${unsigned}.${b64url(signature)}`;
-}
-
 export async function createRealtimeClientSecret(userId: string): Promise<any | null> {
   const key = process.env.OPENAI_API_KEY;
   if (!key) return null;
@@ -133,7 +123,7 @@ export function integrationStatus() {
   return {
     database: configured("DATABASE_URL") ? "neon" : "local",
     email: configured("GOOGLE_CLIENT_ID") && configured("GOOGLE_CLIENT_SECRET") && configured("GOOGLE_REFRESH_TOKEN") ? "gmail" : configured("EXECUTOR_EMAIL_URL") && configured("EXECUTOR_API_KEY") ? "executor" : "mock",
-    map: configured("APPLE_MAPS_TEAM_ID") && configured("APPLE_MAPS_KEY_ID") && configured("APPLE_MAPS_PRIVATE_KEY") ? "mapkit" : "mock",
+    map: configured("MAPBOX_ACCESS_TOKEN") || configured("MAPBOX_PUBLIC_TOKEN") ? "mapbox" : "mock",
     spotify: configured("SPOTIFY_CLIENT_ID") && configured("SPOTIFY_CLIENT_SECRET") && configured("SPOTIFY_REFRESH_TOKEN") ? "spotify" : "mock",
     voice: configured("OPENAI_API_KEY") ? "openai_realtime" : "browser_speech",
     calendar: "mock",
